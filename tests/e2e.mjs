@@ -162,7 +162,7 @@ await page.getByText('No results yet').waitFor();
 await page.goto(base + '#/data');
 await page.locator('#backup-in').setInputFiles(backupPath);
 await page.getByText('Out of range at last test').waitFor();
-const sub = await page.locator('.page-head .sub').textContent();
+const sub = await page.locator('.hero-banner .sub').textContent();
 assert.ok(sub.includes(`${counts.reports} reports · ${counts.obs} results`), sub);
 assert.ok(sub.includes(`${counts.vaccines} vaccinations`), sub);
 

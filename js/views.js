@@ -7,6 +7,7 @@ import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
 import { searchResults, arrowKeys } from './search.js';
 import { nextCheckup } from './dental.js';
+import { leafSprig, greeting } from './leaves.js';
 import { todayIso } from './format.js';
 import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
@@ -43,7 +44,7 @@ export function metricRow(entry) {
 }
 
 function emptyState() {
-  return h('section', { class: 'card empty' },
+  return h('section', { class: 'card empty' }, leafSprig('leaf-empty'),
     h('h2', null, 'No results yet'),
     h('p', null, 'Add a lab report: attach the photo or screenshot, let Claude read the values, check them, save. Every value you save shows up here with its trend.'),
     h('div', { class: 'btn-row' },
@@ -51,15 +52,26 @@ function emptyState() {
       h('a', { class: 'btn', href: '#/data' }, 'Try with demo data')));
 }
 
+// Overview header: greeting, title and summary on a soft green banner with a leaf sprig.
+function heroHead({ actions, sub }) {
+  return h('header', { class: 'hero-banner' },
+    leafSprig(),
+    h('div', { class: 'hero-text' },
+      h('div', { class: 'hero-greeting' }, greeting()),
+      h('h1', null, 'Health records'),
+      sub ? h('p', { class: 'sub' }, sub) : null),
+    actions ? h('div', { class: 'actions' }, actions) : null);
+}
+
 export function viewOverview(root) {
   if (!state.obs.length && !state.vaccines.length && !state.measures.length && !state.workouts.length && !state.bp.length && !state.dental.length) {
-    root.append(pageHead('Health records'), emptyState());
+    root.append(heroHead({}), emptyState());
     return;
   }
   const lastDate = state.reports.reduce((a, r) => (r.date > a ? r.date : a), '');
   const list = h('div', { class: 'overview-grid' });
   root.append(
-    pageHead('Health records', { actions: [h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report'), state.obs.length ? discussButton() : null], sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
+    heroHead({ actions: [h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report'), state.obs.length ? discussButton() : null], sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
     searchBox(overviewQuery, 'Search everything', (q) => { overviewQuery = q; render(); }),
     list);
 
