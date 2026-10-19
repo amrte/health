@@ -24,6 +24,10 @@ await page.reload();
 await page.locator('.findings').waitFor();
 assert.match(await page.locator('.page-head .sub').textContent(), /7 reports/, 'demo is seeded only once');
 
+await page.goto(demo + '#/dna');
+await page.getByText('23andMe and tellmeGen compared').waitFor();
+assert.ok(await page.getByText('They agree on 15 of 15 variants tested by both.').isVisible());
+await page.screenshot({ path: SHOTS + 'dist-dna.png', fullPage: true });
 await page.goto(demo + '#/test/ferritin');
 await page.locator('.chart svg').waitFor();
 await page.goto(demo + '#/data');

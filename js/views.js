@@ -174,7 +174,7 @@ function reportRow(r) {
 
 export function viewReports(root) {
   const list = h('div', { class: 'card list' });
-  root.append(pageHead('Lab reports', { actions: h('a', { class: 'btn primary', href: '#/add' }, '+ Add') }));
+  root.append(pageHead('Lab reports', { actions: [h('a', { class: 'btn', href: '#/dna' }, 'DNA'), h('a', { class: 'btn primary', href: '#/add' }, '+ Add')] }));
   if (!state.reports.length) {
     root.append(emptyState());
     return;

@@ -11,6 +11,7 @@ import { parseValue, parseRange } from './parse.js';
 import { dateMs } from './format.js';
 import { calculatedObs } from './calc.js';
 import { evaluate } from './evaluate.js';
+import { dnaLabFindings } from './dna-eval.js';
 
 export const state = {
   reports: [],
@@ -101,7 +102,8 @@ export function derive() {
     calc.get(o.metric).push(o);
   }
   for (const [key, list] of calc) add(key, list);
-  state.findings = evaluate(state.byMetric, state.profile);
+  state.findings = evaluate(state.byMetric, state.profile).concat(dnaLabFindings(state.genomes, state.byMetric, state.profile))
+    .sort((a, b) => ['alert', 'attention', 'info', 'good'].indexOf(a.level) - ['alert', 'attention', 'info', 'good'].indexOf(b.level));
 }
 
 export function findingsFor(key) {

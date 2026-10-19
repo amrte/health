@@ -95,6 +95,30 @@ works offline.
   - A reading of 180/110 or more triggers an alert, with the AHA advice on
     symptoms that need emergency care.
 
+**DNA (23andMe, tellmeGen)**
+- Import the raw data file (ZIP, TXT or CSV). It's read on the device, and
+  only the 16 positions the app explains are kept; the rest of the genome is
+  never stored. Rows are matched by rsID or by chromosome position, since
+  both providers sometimes use their own IDs.
+- Variants:
+  - **Health:** HFE haemochromatosis (C282Y, H63D); factor V Leiden and
+    prothrombin G20210A
+  - **Medicines:** statins (SLCO1B1), clopidogrel (CYP2C19), warfarin
+    sensitivity (VKORC1, CYP2C9), following CPIC
+  - **Traits:** lactose tolerance (LCT), ACTN3, MTHFR (with the ACMG note on
+    its limited use)
+  - **APOE:** hidden until you explicitly choose to see it
+- Genotypes are read on the GRCh37 plus strand. Factor V Leiden and ACTN3 are
+  handled specially, because the reference sequence itself carries the
+  variant. Files reported on the opposite strand are detected where possible.
+- With files from both providers, the app shows where they agree and where
+  they disagree.
+- DNA is combined with lab values: an HFE genotype together with high
+  ferritin, and SLCO1B1 together with LDL.
+- A clear note on accuracy (Tandy-Connor 2018: about 40 % false positives
+  among reported variants in medically important genes). A missing variant
+  means "not tested", not "normal".
+
 **Discuss with Claude**
 - A button on the overview and on every test page. It builds a summary to paste
   into the Claude app. You choose:
@@ -189,6 +213,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/calc.js`, `js/insights.js` | Calculated values (eGFR, non-HDL); findings UI |
 | `js/polar.js`, `js/zip.js` | Polar import; streaming ZIP reader |
 | `js/fitness.js`, `js/fitness-eval.js` | Fitness screen and findings |
+| `js/bp.js`, `js/bp-eval.js` | Blood pressure entry, import, chart, ESC/ESH evaluation |
+| `js/genome.js`, `js/dna-variants.js`, `js/dna.js`, `js/dna-eval.js` | Raw DNA reader, curated variants, DNA screen, DNA + lab findings |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
 Results are stored as printed (value, unit and range as text) and are parsed
@@ -197,9 +223,6 @@ results saved earlier.
 
 ## Planned next
 
-- **DNA:** read the raw data files from 23andMe and tellmeGen and show a short
-  list of well-known variants, linked to related lab tests (e.g. iron). This is
-  informational only, not diagnostic.
 - A timeline of check-ups, vaccinations, illnesses and medications, and a
   printable summary for doctor visits.
 

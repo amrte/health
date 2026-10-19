@@ -87,7 +87,7 @@ export function demoData() {
     ['2025-11-03', 'Comirnaty', ['covid'], 'booster', ''],
     ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', ''],
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
-  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp() };
+  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes() };
 }
 
 export const DEMO_PROFILE = { sex: 'male', birthYear: 1980 };
@@ -141,4 +141,21 @@ export function demoBp(today = new Date()) {
   const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   out.push({ id: `demo:bp:${date}T10:20`, time: `${date}T10:20`, sys: 142, dia: 88, pulse: 72, arm: 'right', place: 'clinic', note: 'Annual check-up', source: 'demo' });
   return out;
+}
+
+// Two made-up DNA tests that agree except for one no-call. Notable: HFE C282Y carrier,
+// SLCO1B1 decreased function (relevant to his LDL), CYP2C19 *1/*17.
+export function demoGenomes() {
+  const snps = {
+    rs1800562: 'AG', rs1799945: 'CC', rs6025: 'CC', rs1799963: 'GG', rs4149056: 'TC',
+    rs4244285: 'GG', rs4986893: 'GG', rs12248560: 'CT', rs9923231: 'CT', rs1799853: 'CC', rs1057910: 'AA',
+    rs1801133: 'GA', rs4988235: 'AG', rs1815739: 'CT', rs429358: 'TT', rs7412: 'CC',
+  };
+  const tellme = { ...snps };
+  delete tellme.rs1815739;
+  const at = new Date().toISOString();
+  return [
+    { id: 'genome:23andMe', provider: '23andMe', fileName: 'genome_Demo_Person_v5_Full.txt', importedAt: at, build: 'GRCh37', total: 638000, snps, demo: true },
+    { id: 'genome:tellmeGen', provider: 'tellmeGen', fileName: 'tellmegen_demo.csv', importedAt: at, build: 'GRCh37', total: 751000, snps: tellme, demo: true },
+  ];
 }

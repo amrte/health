@@ -4,8 +4,10 @@
 
 import { listZip, readEntry } from './zip.js';
 
-// Parses lines of a raw genotype file. `wanted` is a Set of rsIDs to keep.
-export function createParser(wanted) {
+// Parses lines of a raw genotype file. Keeps SNPs whose rsID is in `wanted`, or
+// whose GRCh37 "chromosome:position" is in `byPosition` (tellmeGen and 23andMe
+// sometimes use internal IDs instead of rsIDs).
+export function createParser(wanted, byPosition = new Map()) {
   const snps = {};
   const meta = { total: 0, comments: [], layout: null };
   let rest = '';
@@ -24,21 +26,25 @@ export function createParser(wanted) {
       if (lower.some((x) => /^(rsid|snp|name|marker)/.test(x))) {
         meta.layout = {
           rsid: lower.findIndex((x) => /^(rsid|snp|name|marker)/.test(x)),
+          chrom: lower.findIndex((x) => /^chr/.test(x)),
+          pos: lower.findIndex((x) => /^pos/.test(x)),
           gt: lower.findIndex((x) => /genotype|^result/.test(x)),
           a1: lower.findIndex((x) => /^allele ?1/.test(x)),
           a2: lower.findIndex((x) => /^allele ?2/.test(x)),
         };
         return;
       }
-      meta.layout = c.length >= 5 ? { rsid: 0, gt: -1, a1: 3, a2: 4 } : { rsid: 0, gt: 3, a1: -1, a2: -1 };
+      meta.layout = c.length >= 5 ? { rsid: 0, chrom: 1, pos: 2, gt: -1, a1: 3, a2: 4 } : { rsid: 0, chrom: 1, pos: 2, gt: 3, a1: -1, a2: -1 };
     }
-    const rsid = c[meta.layout.rsid];
-    if (!rsid || !/^(rs|i)\d+$/i.test(rsid)) return;
+    const id = (c[meta.layout.rsid] ?? '').toLowerCase();
+    if (!id || !/^\d+$/.test(c[meta.layout.pos] ?? '')) return; // not a marker row
     meta.total++;
-    if (!wanted.has(rsid.toLowerCase())) return;
+    const chrom = String(c[meta.layout.chrom] ?? '').replace(/^chr/i, '');
+    const key = wanted.has(id) ? id : byPosition.get(`${chrom}:${c[meta.layout.pos]}`);
+    if (!key) return;
     let gt = meta.layout.gt >= 0 ? c[meta.layout.gt] : `${c[meta.layout.a1] ?? ''}${c[meta.layout.a2] ?? ''}`;
     gt = (gt ?? '').toUpperCase().replace(/[^ACGTID-]/g, '');
-    if (gt && !/^-+$|^0+$/.test(gt)) snps[rsid.toLowerCase()] = gt;
+    if (gt && !/^-+$|^0+$/.test(gt)) snps[key] = gt;
   }
 
   return {
@@ -72,11 +78,11 @@ async function streamText(blobOrText, parser) {
 }
 
 // Reads a raw file (or a ZIP containing one). Returns { snps, total, provider, build, fileName }.
-export async function readGenomeFile(file, wanted) {
-  const parser = createParser(wanted);
+export async function readGenomeFile(file, wanted, byPosition) {
+  const parser = createParser(wanted, byPosition);
   let name = file.name;
   if (/\.zip$/i.test(file.name) || file.type === 'application/zip') {
-    const entries = (await listZip(file)).filter((e) => /\.(txt|csv|tsv)$/i.test(e.name)).sort((a, b) => b.size - a.size);
+    const entries = (await listZip(file)).filter((e) => /\.(txt|csv|tsv)$/i.test(e.name) && !/^__macosx/i.test(e.name)).sort((a, b) => b.size - a.size);
     if (!entries.length) throw new Error('No raw data text file found in the ZIP.');
     name = entries[0].name;
     await streamText(await readEntry(file, entries[0]), parser);
@@ -84,7 +90,7 @@ export async function readGenomeFile(file, wanted) {
     await streamText(file, parser);
   }
   const out = parser.end();
-  if (!out.total) throw new Error('This doesn’t look like a raw DNA data file (no rsID lines found).');
+  if (!out.total) throw new Error('This doesn’t look like a raw DNA data file (no marker rows with a position found).');
   if (!out.provider) out.provider = /23andme|genome_/i.test(name) ? '23andMe' : /tellmegen/i.test(name) ? 'tellmeGen' : 'Other';
   return { ...out, fileName: name.split('/').pop() };
 }

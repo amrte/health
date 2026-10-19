@@ -74,9 +74,9 @@ async function importBackup(file) {
 }
 
 async function writeDemo() {
-  const { reports, obs, vaccines, measures, workouts, bp } = demoData();
+  const { reports, obs, vaccines, measures, workouts, bp, genomes } = demoData();
   const settings = state.profile.sex || state.profile.birthYear ? [] : [{ id: 'profile', ...DEMO_PROFILE }];
-  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts, bp } });
+  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts, bp, genomes } });
   await load();
 }
 
@@ -103,6 +103,7 @@ async function removeDemo() {
     measures: state.measures.filter((m) => m.source === 'demo').map((m) => m.id),
     workouts: state.workouts.filter((w) => w.source === 'demo').map((w) => w.id),
     bp: state.bp.filter((r) => r.source === 'demo').map((r) => r.id),
+    genomes: state.genomes.filter((g) => g.demo).map((g) => g.id),
   } });
   await load();
   toast('Demo data removed');
@@ -177,7 +178,7 @@ export async function viewData(root) {
   const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo');
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Demo data'),
-    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings and six months of watch data. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
+    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
     h('div', { class: 'btn-row' },
       hasDemo
         ? h('button', { class: 'btn', type: 'button', onclick: async () => { await removeDemo(); go('#/data'); } }, 'Remove demo data')
