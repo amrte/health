@@ -17,6 +17,8 @@ export const state = {
   obs: [],
   vaccines: [],
   profile: {}, // { sex: 'female' | 'male' | '', birthYear }
+  measures: [], // daily values from devices: { id, date, kind, value, source }
+  workouts: [], // { id, start, sport, durationS, distanceM, hrAvg, hrMax, kcal, load, source }
   findings: [],
   reportById: new Map(),
   byMetric: new Map(), // key → { m, pts }
@@ -25,8 +27,9 @@ export const state = {
 
 export async function load() {
   let profile;
-  [state.reports, state.obs, state.vaccines, profile] = await Promise.all([
-    db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile')]);
+  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts] = await Promise.all([
+    db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile'),
+    db.getAll('measures'), db.getAll('workouts')]);
   state.profile = profile ?? {};
   derive();
 }
@@ -177,5 +180,19 @@ export async function saveVaccines(items, { newFiles = [], removedFileIds = [] }
 export async function deleteVaccine(id) {
   const v = state.vaccines.find((x) => x.id === id);
   await db.write({ del: { vaccines: [id], files: unusedFiles((v?.files ?? []).map((f) => f.id), [id]) } });
+  await load();
+}
+
+// Device data is keyed by source, kind and date, so re-importing replaces instead of duplicating.
+export async function saveFitness({ measures = [], workouts = [] }) {
+  await db.write({ put: { measures, workouts } });
+  await load();
+}
+
+export async function deleteFitness(source) {
+  await db.write({ del: {
+    measures: state.measures.filter((m) => !source || m.source === source).map((m) => m.id),
+    workouts: state.workouts.filter((w) => !source || w.source === source).map((w) => w.id),
+  } });
   await load();
 }

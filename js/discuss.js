@@ -6,6 +6,8 @@ import { state } from './store.js';
 import { pageHead } from './ui.js';
 import { copyText } from './editor.js';
 import { buildSummary } from './summary.js';
+import { KINDS, recentVsBaseline, weeklyMinutes } from './fitness.js';
+import { fmtNum } from './format.js';
 
 export function discussButton(key) {
   return h('a', { class: 'btn', href: key ? `#/discuss/${encodeURIComponent(key)}` : '#/discuss' }, 'Discuss with Claude');
@@ -31,12 +33,27 @@ export function viewDiscuss(root, focusKey) {
     includeProfile: true,
     includeFindings: true,
     includeVaccines: !focusKey,
+    includeFitness: !focusKey && state.measures.length + state.workouts.length > 0,
     question: '',
+  };
+  const fitnessLines = () => {
+    const out = [];
+    for (const [kind, k] of Object.entries(KINDS)) {
+      const r = recentVsBaseline(kind);
+      if (!r || r.recent == null) continue;
+      out.push(`${k.name}: ${fmtNum(+r.recent.toFixed(k.digits))} ${k.unit}`.trim() + (r.base != null ? ` (before: ${fmtNum(+r.base.toFixed(k.digits))})` : ''));
+    }
+    if (state.workouts.length) {
+      const weeks = weeklyMinutes(Date.now() - 35 * 864e5).slice(0, -1).slice(-4);
+      if (weeks.length) out.push(`Workouts: ${fmtNum(Math.round(weeks.reduce((a, w) => a + w.v, 0) / weeks.length))} min per week (last ${weeks.length} weeks)`);
+    }
+    return out;
   };
 
   const preview = h('pre', { class: 'summary-preview' });
   const update = () => {
-    preview.textContent = buildSummary(state.byMetric, { ...opts, profile: state.profile, findings: state.findings, vaccines: state.vaccines });
+    preview.textContent = buildSummary(state.byMetric, { ...opts, profile: state.profile, findings: state.findings, vaccines: state.vaccines,
+      fitness: opts.includeFitness ? fitnessLines() : [] });
     count.textContent = `${keys.size} of ${all.length} tests`;
   };
   const count = h('span', { class: 'muted small' });
@@ -76,6 +93,7 @@ export function viewDiscuss(root, focusKey) {
     check('Age and sex', 'includeProfile'),
     check('What the app noted (findings)', 'includeFindings'),
     check('Vaccinations', 'includeVaccines'),
+    state.measures.length + state.workouts.length ? check('Watch data (heart rate, sleep, activity)', 'includeFitness') : null,
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: false, onchange: (e) => { opts.history = e.target.checked ? 'recent' : 'all'; update(); } }), 'Only the last 3 results per test'),
     h('div', { class: 'btn-row' },
       h('button', { class: 'btn', type: 'button', onclick: () => { all.forEach((e) => keys.add(e.m.key)); renderTests(); update(); } }, 'All tests'),

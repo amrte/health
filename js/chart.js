@@ -48,7 +48,7 @@ function marker(p, x, y, extra = {}) {
 }
 
 // Draws the series into `host`. Points need { t, v, lo, hi, status, o }.
-export function lineChart(host, { pts, unit }) {
+export function lineChart(host, { pts, unit, height = 220 }) {
   const data = pts.filter((p) => p.v != null);
   const band = [...data].reverse().find((p) => p.lo != null || p.hi != null);
   const wrap = h('div', { class: 'chart' });
@@ -74,7 +74,7 @@ export function lineChart(host, { pts, unit }) {
     );
     const st = statusLabel(p.status);
     tip.replaceChildren(
-      h('div', { class: 'tip-value' }, `${p.qualifier}${fmtNum(p.v)} ${unit}`, st ? h('span', { class: `tip-status st-${p.status}` }, ' · ', st) : null),
+      h('div', { class: 'tip-value' }, `${p.qualifier ?? ''}${p.display ?? fmtNum(p.v)} ${unit}`, st ? h('span', { class: `tip-status st-${p.status}` }, ' · ', st) : null),
       h('div', { class: 'tip-meta' }, fmtDate(p.o.date)),
       ...(p.lab ? [h('div', { class: 'tip-meta' }, p.lab)] : []),
     );
@@ -86,7 +86,7 @@ export function lineChart(host, { pts, unit }) {
 
   function draw() {
     const W = Math.max(260, wrap.clientWidth);
-    const H = 220;
+    const H = height;
     const M = { l: 44, r: 16, t: 16, b: 28 };
     const vals = data.map((p) => p.v);
     if (band?.lo != null) vals.push(band.lo);
@@ -125,11 +125,15 @@ export function lineChart(host, { pts, unit }) {
     if (data.length > 1) {
       svg.append(s('path', { d: data.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(''), class: 'line' }));
     }
-    for (const p of data) svg.append(marker(p, x(p.t), y(p.v)));
+    // Long daily series: a line only, with markers just for flagged points and the latest.
+    const dense = data.length > 60;
+    for (const p of data) {
+      if (!dense || p === data[data.length - 1] || p.status === 'high' || p.status === 'low') svg.append(marker(p, x(p.t), y(p.v)));
+    }
     const last = data[data.length - 1];
     const lx = x(last.t);
     svg.append(s('text', { x: lx > W - 70 ? lx - 10 : lx + 10, y: y(last.v) - 12, class: 'end-label',
-      'text-anchor': lx > W - 70 ? 'end' : 'start' }, `${last.qualifier}${fmtNum(last.v)}`));
+      'text-anchor': lx > W - 70 ? 'end' : 'start' }, `${last.qualifier ?? ''}${last.display ?? fmtNum(last.v)}`));
     svg.append(s('g', { class: 'hover' }));
     const hit = s('rect', { x: M.l, y: 0, width: W - M.l - M.r, height: H, class: 'hit' });
     svg.append(hit);
@@ -187,4 +191,62 @@ export function sparkline(pts) {
   const last = d[d.length - 1];
   svg.append(s('circle', { cx: x(last.t), cy: y(last.v), r: 3, class: 'spark-dot' + (last.status === 'high' || last.status === 'low' ? ' out' : '') }));
   return svg;
+}
+
+// Columns with an optional target line, e.g. weekly activity minutes vs. a guideline.
+// bars: [{ t, v, label, sub }]
+export function barChart(host, { bars, unit, target, targetLabel, height = 200 }) {
+  const wrap = h('div', { class: 'chart', style: `height:${height}px` });
+  const tip = h('div', { class: 'tip', hidden: true });
+  host.append(wrap);
+  if (!bars.length) {
+    wrap.append(h('p', { class: 'muted chart-empty' }, 'No data in this period.'));
+    return;
+  }
+  function draw() {
+    const W = Math.max(260, wrap.clientWidth);
+    const H = height;
+    const M = { l: 40, r: 12, t: 14, b: 26 };
+    const max = Math.max(...bars.map((b) => b.v), target ?? 0) * 1.1 || 1;
+    const yt = niceTicks(0, max);
+    const y = (v) => M.t + (1 - v / yt.hi) * (H - M.t - M.b);
+    const slot = (W - M.l - M.r) / bars.length;
+    const bw = Math.min(24, Math.max(2, slot - 2));
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Bar chart, ${bars.length} bars` });
+    for (const v of yt.ticks) {
+      svg.append(s('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: v === 0 ? 'axis' : 'grid' }),
+        s('text', { x: M.l - 8, y: y(v), class: 'tick', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, fmtNum(v)));
+    }
+    const every = Math.ceil(bars.length / Math.floor((W - M.l - M.r) / 56));
+    bars.forEach((b, i) => {
+      const cx = M.l + slot * (i + 0.5);
+      const top = y(b.v);
+      const hgt = Math.max(0, y(0) - top);
+      const r = Math.min(4, bw / 2, hgt);
+      // rounded top, square at the baseline
+      const d = `M${cx - bw / 2},${y(0)}V${top + r}Q${cx - bw / 2},${top} ${cx - bw / 2 + r},${top}H${cx + bw / 2 - r}Q${cx + bw / 2},${top} ${cx + bw / 2},${top + r}V${y(0)}Z`;
+      const bar = s('path', { d, class: 'bar' + (target != null && b.v >= target ? ' bar-met' : '') });
+      const hit = s('rect', { x: M.l + slot * i, y: M.t, width: slot, height: H - M.t - M.b, class: 'hit' });
+      const show = () => {
+        tip.replaceChildren(h('div', { class: 'tip-value' }, `${fmtNum(b.v)} ${unit}`), h('div', { class: 'tip-meta' }, b.label), ...(b.sub ? [h('div', { class: 'tip-meta' }, b.sub)] : []));
+        tip.hidden = false;
+        const w = tip.offsetWidth;
+        tip.style.left = Math.min(Math.max(cx - w / 2, 0), wrap.clientWidth - w) + 'px';
+        tip.style.top = Math.max(top - tip.offsetHeight - 10, 0) + 'px';
+      };
+      hit.addEventListener('pointermove', show);
+      hit.addEventListener('pointerdown', show);
+      hit.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') tip.hidden = true; });
+      svg.append(bar, hit);
+      if (i % every === 0) svg.append(s('text', { x: cx, y: H - 8, class: 'tick', 'text-anchor': 'middle' }, b.tick ?? ''));
+    });
+    if (target != null) {
+      svg.append(s('line', { x1: M.l, x2: W - M.r, y1: y(target), y2: y(target), class: 'target' }),
+        s('text', { x: W - M.r, y: y(target) - 6, class: 'target-label', 'text-anchor': 'end' }, targetLabel ?? ''));
+    }
+    wrap.replaceChildren(svg, tip);
+  }
+  let lastW = wrap.clientWidth;
+  if (lastW) draw();
+  new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; draw(); } }).observe(wrap);
 }

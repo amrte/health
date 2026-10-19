@@ -87,7 +87,36 @@ export function demoData() {
     ['2025-11-03', 'Comirnaty', ['covid'], 'booster', ''],
     ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', ''],
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
-  return { reports, obs, vaccines };
+  return { reports, obs, vaccines, ...demoFitness() };
 }
 
 export const DEMO_PROFILE = { sex: 'male', birthYear: 1980 };
+
+// Six months of made-up watch data: night-time heart rate, HRV, sleep, steps and
+// 2–4 workouts a week. The last week shows a cold: higher heart rate, lower HRV.
+export function demoFitness(today = new Date()) {
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const measures = [];
+  const workouts = [];
+  const end = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) - 864e5;
+  const sports = [['Running', 45, 8500, 148], ['Cycling', 70, 24000, 132], ['Strength training', 40, 0, 112], ['Walking', 55, 4800, 104]];
+  for (let i = 182; i >= 0; i--) {
+    const t = end - i * 864e5;
+    const date = new Date(t).toISOString().slice(0, 10);
+    const sick = i < 6;
+    const add = (kind, value) => measures.push({ id: `demo:${kind}:${date}`, date, kind, value, source: 'demo' });
+    add('night_hr', Math.round(52 + rnd() * 4 - i / 120 + (sick ? 7 : 0)));
+    add('hrv', Math.round(46 + rnd() * 10 + i / 60 - (sick ? 14 : 0)));
+    add('sleep_min', Math.round(6.4 * 60 + rnd() * 80 - (new Date(t).getUTCDay() === 0 ? -40 : 0)));
+    add('steps', Math.round(5200 + rnd() * 7000 - (sick ? 3000 : 0)));
+    const dow = new Date(t).getUTCDay();
+    if (!sick && (dow === 2 || dow === 6 || (dow === 4 && rnd() > 0.4))) {
+      const [sport, min, dist, hr] = sports[Math.floor(rnd() * sports.length)];
+      const dur = Math.round((min + rnd() * 20 - 10) * 60);
+      workouts.push({ id: `demo:w:${date}`, start: `${date}T17:30:00`, sport, durationS: dur, distanceM: dist ? Math.round(dist * (dur / 60 / min)) : null,
+        hrAvg: Math.round(hr + rnd() * 8 - 4), hrMax: Math.round(hr + 22 + rnd() * 8), kcal: Math.round(dur / 60 * 9), load: Math.round(dur / 60 * (hr - 90) / 12), source: 'demo' });
+    }
+  }
+  return { measures, workouts };
+}

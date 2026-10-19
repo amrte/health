@@ -27,6 +27,8 @@ async function exportBackup() {
     reports: state.reports,
     obs: state.obs,
     vaccines: state.vaccines,
+    measures: state.measures,
+    workouts: state.workouts,
     profile: state.profile,
     files: await Promise.all(files.map(async (f) => ({ id: f.id, type: f.type, name: f.name, data: await blobToDataUrl(f.blob) }))),
   };
@@ -61,16 +63,17 @@ async function importBackup(file) {
   if (!confirm(`Import ${data.reports.length} reports, ${data.obs.length} results, ${vaccines.length} vaccinations and ${data.files?.length ?? 0} photos? Records that already exist here are replaced by the backup's version.`)) return;
   const files = await Promise.all((data.files ?? []).map(async (f) => ({ id: f.id, type: f.type, name: f.name, blob: await (await fetch(f.data)).blob() })));
   const settings = data.profile && typeof data.profile === 'object' ? [{ ...data.profile, id: 'profile' }] : [];
-  await db.write({ put: { reports: data.reports, obs: data.obs, vaccines, files, settings } });
+  const arr = (x) => (Array.isArray(x) ? x : []);
+  await db.write({ put: { reports: data.reports, obs: data.obs, vaccines, files, settings, measures: arr(data.measures), workouts: arr(data.workouts) } });
   await load();
   toast('Backup imported');
   go('#/');
 }
 
 async function writeDemo() {
-  const { reports, obs, vaccines } = demoData();
+  const { reports, obs, vaccines, measures, workouts } = demoData();
   const settings = state.profile.sex || state.profile.birthYear ? [] : [{ id: 'profile', ...DEMO_PROFILE }];
-  await db.write({ put: { reports, obs, vaccines, settings } });
+  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts } });
   await load();
 }
 
@@ -94,6 +97,8 @@ async function removeDemo() {
     reports: ids,
     obs: state.obs.filter((o) => set.has(o.reportId)).map((o) => o.id),
     vaccines: state.vaccines.filter((v) => v.demo).map((v) => v.id),
+    measures: state.measures.filter((m) => m.source === 'demo').map((m) => m.id),
+    workouts: state.workouts.filter((w) => w.source === 'demo').map((w) => w.id),
   } });
   await load();
   toast('Demo data removed');
@@ -165,10 +170,10 @@ export async function viewData(root) {
       h('li', null, 'Tap the Share button, then “Add to Home Screen”.'),
       h('li', null, 'Open the app from the Home Screen icon from now on. It works offline, and Safari doesn’t clear its data after a week of not using it.'))));
 
-  const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo);
+  const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo');
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Demo data'),
-    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, plus a few vaccinations. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
+    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations and six months of watch data. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
     h('div', { class: 'btn-row' },
       hasDemo
         ? h('button', { class: 'btn', type: 'button', onclick: async () => { await removeDemo(); go('#/data'); } }, 'Remove demo data')

@@ -5,6 +5,7 @@ import { CATEGORIES, CATEGORY_NAME } from './metrics.js';
 import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport, findingsFor } from './store.js';
 import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
+import { fitnessFindings } from './fitness-eval.js';
 import { fmtDate, fmtRange } from './format.js';
 import { lineChart, sparkline } from './chart.js';
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
@@ -46,14 +47,14 @@ function emptyState() {
 }
 
 export function viewOverview(root) {
-  if (!state.obs.length && !state.vaccines.length) {
+  if (!state.obs.length && !state.vaccines.length && !state.measures.length && !state.workouts.length) {
     root.append(pageHead('Health records'), emptyState());
     return;
   }
   const lastDate = state.reports.reduce((a, r) => (r.date > a ? r.date : a), '');
   const list = h('div');
   root.append(
-    pageHead('Health records', { actions: state.obs.length ? discussButton() : null, sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
+    pageHead('Health records', { actions: [h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report'), state.obs.length ? discussButton() : null], sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
     searchBox(overviewQuery, 'Search tests, labs, notes', (q) => { overviewQuery = q; render(); }),
     list);
 
@@ -64,13 +65,14 @@ export function viewOverview(root) {
       // A guideline finding for a test already says it's out of range; skip the generic one.
       const strong = state.findings.filter((f) => (f.level === 'alert' || f.level === 'attention') && f.kind !== 'range');
       const important = state.findings.filter((f) => (f.level === 'alert' || f.level === 'attention') &&
-        !(f.kind === 'range' && strong.some((g) => g.keys.includes(f.keys[0]))));
+        !(f.kind === 'range' && strong.some((g) => g.keys.includes(f.keys[0]))))
+        .concat(fitnessFindings().filter((f) => f.level === 'alert' || f.level === 'attention'));
       if (important.length) {
         const shown = showAllFindings ? important : important.slice(0, 4);
         out.push(h('section', { class: 'group' },
           h('h2', null, 'Findings'),
           h('div', { class: 'card findings' },
-            shown.map((f) => findingItem(f, { link: `#/test/${enc(f.keys[0])}` })),
+            shown.map((f) => findingItem(f, { link: f.kind === 'fitness' ? '#/fitness' : `#/test/${enc(f.keys[0])}` })),
             important.length > shown.length
               ? h('button', { class: 'btn', type: 'button', onclick: () => { showAllFindings = true; render(); } }, `Show all ${important.length}`)
               : null)));
@@ -169,7 +171,7 @@ function reportRow(r) {
 
 export function viewReports(root) {
   const list = h('div', { class: 'card list' });
-  root.append(pageHead('Reports', { actions: h('a', { class: 'btn primary', href: '#/add' }, '+ Add') }));
+  root.append(pageHead('Lab reports', { actions: h('a', { class: 'btn primary', href: '#/add' }, '+ Add') }));
   if (!state.reports.length) {
     root.append(emptyState());
     return;

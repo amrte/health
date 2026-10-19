@@ -6,6 +6,7 @@ import { viewOverview, viewMetric, viewReports, viewReport } from './views.js';
 import { viewEditor, editorDirty, clearDirty } from './editor.js';
 import { viewData, seedDemoOnce } from './data.js';
 import { viewDiscuss } from './discuss.js';
+import { viewFitness, viewFitnessKind } from './fitness.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -13,7 +14,9 @@ const ROUTES = [
   [/^#\/test\/(.+)$/, (root, key) => viewMetric(root, key), 'overview'],
   [/^#\/reports$/, (root) => viewReports(root), 'reports'],
   [/^#\/report\/(.+)$/, (root, id) => viewReport(root, id), 'reports'],
-  [/^#\/add$/, (root) => viewEditor(root, null), 'add'],
+  [/^#\/add$/, (root) => viewEditor(root, null), 'reports'],
+  [/^#\/fitness$/, (root) => viewFitness(root), 'fitness'],
+  [/^#\/fitness\/(.+)$/, (root, kind) => viewFitnessKind(root, kind), 'fitness'],
   [/^#\/edit\/(.+)$/, (root, id) => viewEditor(root, id), 'reports'],
   [/^#\/vaccines$/, (root) => viewVaccines(root), 'vaccines'],
   [/^#\/vaccines\/add$/, (root) => viewVaccineEditor(root, null), 'vaccines'],

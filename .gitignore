@@ -2,3 +2,4 @@ node_modules/
 tests/screenshots/
 *.json.bak
 health-backup-*.json
+tests/fixtures/
