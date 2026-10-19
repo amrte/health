@@ -119,6 +119,18 @@ works offline.
   among reported variants in medically important genes). A missing variant
   means "not tested", not "normal".
 
+**Search**
+- Searches everything:
+  - tests, including their names in English, German, Finnish, Ukrainian and
+    Russian and the names labs print
+  - lab reports, findings, vaccinations and diseases
+  - DNA genes and rsIDs, blood pressure days and workouts
+  - app sections (with Ukrainian keywords too, e.g. "тиск" or "щеплення")
+- Forgives one typo per word from 5 letters.
+- On a phone: the search box on the Overview. On wide screens: the sidebar
+  box, opened with ⌘K or "/". Arrow keys move through results and Enter
+  opens one.
+
 **Discuss with Claude**
 - A button on the overview and on every test page. It builds a summary to paste
   into the Claude app. You choose:

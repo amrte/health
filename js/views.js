@@ -5,6 +5,7 @@ import { CATEGORIES, CATEGORY_NAME } from './metrics.js';
 import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport, findingsFor } from './store.js';
 import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
+import { searchResults, arrowKeys } from './search.js';
 import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
 import { fmtDate, fmtRange } from './format.js';
@@ -56,10 +57,13 @@ export function viewOverview(root) {
   const list = h('div', { class: 'overview-grid' });
   root.append(
     pageHead('Health records', { actions: [h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report'), state.obs.length ? discussButton() : null], sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
-    searchBox(overviewQuery, 'Search tests, labs, notes', (q) => { overviewQuery = q; render(); }),
+    searchBox(overviewQuery, 'Search everything', (q) => { overviewQuery = q; render(); }),
     list);
 
+  arrowKeys(root.querySelector('input.search'), list);
   function render() {
+    // Typing in the box searches everything; the dashboard returns when it's empty.
+    if (overviewQuery.trim()) { list.replaceChildren(searchResults(overviewQuery)); return; }
     const entries = [...state.byMetric.values()].filter((e) => matches(overviewQuery, metricSearchText(e)));
     const out = [];
     if (!overviewQuery) {

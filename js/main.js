@@ -10,6 +10,7 @@ import { viewDiscuss } from './discuss.js';
 import { viewFitness, viewFitnessKind } from './fitness.js';
 import { viewBp } from './bp.js';
 import { viewDna } from './dna.js';
+import { viewSearch } from './search.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -29,6 +30,7 @@ const ROUTES = [
   [/^#\/vaccine\/(.+)$/, (root, id) => viewVaccine(root, id), 'vaccines'],
   [/^#\/discuss(?:\/(.+))?$/, (root, key) => viewDiscuss(root, key), 'overview'],
   [/^#\/data$/, (root) => viewData(root), 'data'],
+  [/^#\/search(?:\/(.*))?$/, (root, q) => viewSearch(root, q), 'search'],
 ];
 
 const main = document.getElementById('view');
@@ -50,6 +52,8 @@ async function route() {
   const root = h('div', { class: 'page' });
   main.replaceChildren(root);
   window.scrollTo(0, 0);
+  const side = document.querySelector('.tabs .side-search');
+  if (side && tab !== 'search') side.value = '';
   try {
     await view(root, arg ? decodeURIComponent(arg) : undefined);
   } catch (err) {
@@ -59,6 +63,31 @@ async function route() {
 }
 
 window.addEventListener('hashchange', route);
+
+// ⌘K / Ctrl+K anywhere, or "/" outside text fields, opens search.
+document.addEventListener('keydown', (e) => {
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '') || document.activeElement?.isContentEditable;
+  if (((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') || (e.key === '/' && !typing)) {
+    e.preventDefault();
+    const side = document.querySelector('.tabs .side-search');
+    if (side && side.offsetParent) { side.focus(); side.select(); } else location.hash = '#/search';
+  }
+});
+document.querySelector('.tabs .side-search')?.addEventListener('keydown', (e) => {
+  const first = main.querySelector('.search-hit');
+  if (!first) return;
+  if (e.key === 'Enter') { e.preventDefault(); location.hash = first.getAttribute('href'); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); first.focus(); }
+});
+// The sidebar box (wide screens) drives the search page; typing replaces the
+// history entry instead of adding one per key.
+document.querySelector('.tabs .side-search')?.addEventListener('input', (e) => {
+  const hash = '#/search/' + encodeURIComponent(e.target.value);
+  if (location.hash.startsWith('#/search')) {
+    history.replaceState(null, '', hash);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+  } else location.hash = hash;
+});
 window.addEventListener('beforeunload', (e) => { if (editorDirty() || vaccineEditorDirty()) e.preventDefault(); });
 
 try {

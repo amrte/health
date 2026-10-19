@@ -47,6 +47,15 @@ await p2.getByText('Not saved in this browser.').waitFor();
 await p2.locator('.findings .finding').first().waitFor();
 await p2.screenshot({ path: SHOTS + 'dist-no-storage.png' });
 
+// Desktop search: Ctrl/⌘+K focuses the sidebar box, results appear as you type, Enter opens the first.
+await p2.keyboard.press('Control+K');
+await p2.keyboard.type('феритин');
+await p2.locator('.search-hit').first().waitFor();
+assert.match(await p2.locator('.search-hit').first().textContent(), /Ferritin/);
+await p2.screenshot({ path: SHOTS + 'dist-search.png' });
+await p2.keyboard.press('Enter');
+await p2.locator('h1', { hasText: 'Ferritin' }).waitFor();
+
 await browser.close();
 assert.deepEqual(errors, [], 'console errors');
 console.log('dist passed');
