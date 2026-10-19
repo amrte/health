@@ -1,15 +1,14 @@
-// Decorative olive branch and the pack-style title.
+// The pack-style logo and the decorative olive branch.
 
 import { h } from './dom.js';
 
 export const APP_NAME = 'Натуральний майонез оливковий 67%';
 
-// "Натуральний" in script, "майонез" on a green ribbon, "Оливковий 67%" below.
+// The pack-style logo picture; its alt text carries the name.
+export const LOGO_SRC = 'icons/logo.webp';
+
 export function logo(tag = 'div') {
-  return h(tag, { class: 'logo', 'aria-label': APP_NAME },
-    h('span', { class: 'logo-script', 'aria-hidden': 'true' }, 'Натуральний'),
-    h('span', { class: 'logo-ribbon', 'aria-hidden': 'true' }, 'майонез'),
-    h('span', { class: 'logo-line', 'aria-hidden': 'true' }, 'Оливковий', h('b', null, '67%')));
+  return h(tag, { class: 'logo' }, h('img', { class: 'logo-img', src: LOGO_SRC, alt: APP_NAME, draggable: 'false' }));
 }
 
 // Olive branch picture (transparent PNG). Decorative: hidden from screen readers

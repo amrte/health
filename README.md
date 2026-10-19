@@ -360,8 +360,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/reminders.js`, `js/screening.js` | Reminders, suggested retests, Finnish and German screening |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
-The title font is a 5 KB subset of Marck Script (SIL Open Font License),
-embedded in `css/app.css`. The olive branch is `icons/olive-branch.png` (a
+The logo is `icons/logo.webp` (the pack's lettering, cut out; on dark
+backgrounds it sits on a cream label). The olive branch is `icons/olive-branch.png` (a
 transparent 24 KB picture); the single-file build inlines it.
 
 Results are stored as printed (value, unit and range as text) and are parsed
