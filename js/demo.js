@@ -87,7 +87,7 @@ export function demoData() {
     ['2025-11-03', 'Comirnaty', ['covid'], 'booster', ''],
     ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', ''],
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
-  return { reports, obs, vaccines, ...demoFitness() };
+  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp() };
 }
 
 export const DEMO_PROFILE = { sex: 'male', birthYear: 1980 };
@@ -119,4 +119,26 @@ export function demoFitness(today = new Date()) {
     }
   }
   return { measures, workouts };
+}
+
+// Home readings morning and evening for the last 3 weeks (slightly elevated),
+// and one reading at a doctor's office.
+export function demoBp(today = new Date()) {
+  let seed = 11;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const out = [];
+  const pad = (n) => String(n).padStart(2, '0');
+  for (let i = 20; i >= 1; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    for (const [time, add] of [['07:15', 4], ['07:17', 1], ['21:30', 0], ['21:32', -2]]) {
+      const sys = Math.round(127 + add + rnd() * 10);
+      const dia = Math.round(80 + add / 2 + rnd() * 6);
+      out.push({ id: `demo:bp:${date}T${time}`, time: `${date}T${time}`, sys, dia, pulse: Math.round(60 + rnd() * 10), arm: 'left', place: 'home', note: '', source: 'demo' });
+    }
+  }
+  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 40);
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  out.push({ id: `demo:bp:${date}T10:20`, time: `${date}T10:20`, sys: 142, dia: 88, pulse: 72, arm: 'right', place: 'clinic', note: 'Annual check-up', source: 'demo' });
+  return out;
 }

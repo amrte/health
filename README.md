@@ -80,6 +80,21 @@ works offline.
   files and open-source parsers, and is tested with made-up files in the
   same format (`tests/polar.test.js`).
 
+**Blood pressure**
+- Quick entry: upper and lower value, pulse, date and time, arm, and whether
+  it was measured at home or at a doctor's office.
+- Import from a cuff app's CSV export (Omron, Withings, Beurer and similar;
+  columns are recognised by name), or have Claude read a paper diary from a
+  photo.
+- A daily chart from the lower to the upper value, with the home limits marked.
+- Findings:
+  - The home average (last 7 days, at least 3 days of readings) is classed by
+    the ESC 2024 home categories: non-elevated, elevated, or hypertension
+    from 135/85.
+  - Office readings are classed by ESC 2024 and ESH 2023 grades.
+  - A reading of 180/110 or more triggers an alert, with the AHA advice on
+    symptoms that need emergency care.
+
 **Discuss with Claude**
 - A button on the overview and on every test page. It builds a summary to paste
   into the Claude app. You choose:
@@ -182,7 +197,6 @@ results saved earlier.
 
 ## Planned next
 
-- **Blood pressure:** quick entry and a trend chart.
 - **DNA:** read the raw data files from 23andMe and tellmeGen and show a short
   list of well-known variants, linked to related lab tests (e.g. iron). This is
   informational only, not diagnostic.

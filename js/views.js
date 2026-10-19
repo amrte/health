@@ -6,6 +6,7 @@ import { state, matches, metricSearchText, reportSearchText, reportPoints, delet
 import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
 import { fitnessFindings } from './fitness-eval.js';
+import { bpFindings } from './bp-eval.js';
 import { fmtDate, fmtRange } from './format.js';
 import { lineChart, sparkline } from './chart.js';
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
@@ -47,7 +48,7 @@ function emptyState() {
 }
 
 export function viewOverview(root) {
-  if (!state.obs.length && !state.vaccines.length && !state.measures.length && !state.workouts.length) {
+  if (!state.obs.length && !state.vaccines.length && !state.measures.length && !state.workouts.length && !state.bp.length) {
     root.append(pageHead('Health records'), emptyState());
     return;
   }
@@ -66,13 +67,15 @@ export function viewOverview(root) {
       const strong = state.findings.filter((f) => (f.level === 'alert' || f.level === 'attention') && f.kind !== 'range');
       const important = state.findings.filter((f) => (f.level === 'alert' || f.level === 'attention') &&
         !(f.kind === 'range' && strong.some((g) => g.keys.includes(f.keys[0]))))
-        .concat(fitnessFindings().filter((f) => f.level === 'alert' || f.level === 'attention'));
+        .concat(fitnessFindings().filter((f) => f.level === 'alert' || f.level === 'attention'))
+        .concat(bpFindings(state.bp).filter((f) => f.level === 'alert' || f.level === 'attention'))
+        .sort((a, b) => (a.level === 'alert' ? 0 : 1) - (b.level === 'alert' ? 0 : 1));
       if (important.length) {
         const shown = showAllFindings ? important : important.slice(0, 4);
         out.push(h('section', { class: 'group' },
           h('h2', null, 'Findings'),
           h('div', { class: 'card findings' },
-            shown.map((f) => findingItem(f, { link: f.kind === 'fitness' ? '#/fitness' : `#/test/${enc(f.keys[0])}` })),
+            shown.map((f) => findingItem(f, { link: f.kind === 'fitness' ? '#/fitness' : f.kind === 'bp' ? '#/bp' : `#/test/${enc(f.keys[0])}` })),
             important.length > shown.length
               ? h('button', { class: 'btn', type: 'button', onclick: () => { showAllFindings = true; render(); } }, `Show all ${important.length}`)
               : null)));

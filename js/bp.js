@@ -128,6 +128,7 @@ export function bpDays(readings) {
 
 const RANGES = [['30 days', 30], ['90 days', 90], ['1 year', 365], ['All', 0]];
 let range = 90;
+let showAll = false;
 
 export function bpSummaryCard() {
   const sorted = [...state.bp].sort((a, b) => b.time.localeCompare(a.time));
@@ -169,7 +170,7 @@ export function viewBp(root) {
   root.append(form);
 
   if (!state.bp.length) {
-    root.append(importCards());
+    root.append(...importCards());
     return;
   }
 
@@ -185,8 +186,9 @@ export function viewBp(root) {
   bpChart(card, { days: bpDays(shown).map((d) => ({ ...d, flag: d.sys >= BP_LINES[0].v || d.dia >= BP_LINES[1].v })), lines: BP_LINES });
   card.append(h('p', { class: 'caption' }, `Each bar runs from the lower to the upper value; lines mark the home-measurement limits (${BP_LINES.map((l) => l.label).join(' / ')} mmHg).`));
 
-  const list = [...state.bp].sort((a, b) => b.time.localeCompare(a.time)).slice(0, 60);
-  root.append(h('section', { class: 'group' }, h('h2', null, 'Readings'), h('div', { class: 'card list' }, list.map((r) =>
+  const all = [...state.bp].sort((a, b) => b.time.localeCompare(a.time));
+  const list = showAll ? all : all.slice(0, 10);
+  root.append(h('section', { class: 'group' }, h('h2', null, `Readings (${all.length})`), h('div', { class: 'card list' }, list.map((r) =>
     h('div', { class: 'row' },
       h('div', { class: 'row-main' },
         h('div', { class: 'row-title' }, `${r.sys}/${r.dia}`, r.pulse ? h('span', { class: 'muted' }, ` · pulse ${r.pulse}`) : null),
@@ -196,7 +198,8 @@ export function viewBp(root) {
         await deleteBp([r.id]);
         go('#/bp');
       } }, '×'))))));
-  root.append(importCards());
+  if (all.length > list.length) root.append(h('button', { class: 'btn', type: 'button', onclick: () => { showAll = true; go('#/bp'); } }, `Show all ${all.length}`));
+  root.append(...importCards());
 }
 
 function importCards() {

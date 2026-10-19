@@ -8,6 +8,7 @@ import { lineChart, barChart, sparkline } from './chart.js';
 import { importFiles } from './polar.js';
 import { findingItem } from './insights.js';
 import { fitnessFindings } from './fitness-eval.js';
+import { bpSummaryCard } from './bp.js';
 
 const DAY = 864e5;
 
@@ -117,6 +118,7 @@ function importCard() {
 export function viewFitness(root) {
   root.append(pageHead('Fitness', { sub: state.measures.length || state.workouts.length
     ? `${state.workouts.length} workouts · ${new Set(state.measures.map((m) => m.date)).size} days of data` : 'Heart rate, sleep, activity and training from your watch' }));
+  root.append(bpSummaryCard());
   if (!state.measures.length && !state.workouts.length) {
     root.append(importCard());
     return;

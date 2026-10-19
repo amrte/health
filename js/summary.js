@@ -68,7 +68,7 @@ export function buildSummary(byMetric, opts) {
   }
 
   if (opts.fitness?.length) {
-    lines.push('', 'From my watch (averages; last 7 days vs. the 4 weeks before):');
+    lines.push('', 'Blood pressure and watch data (watch values: last 7 days vs. the 4 weeks before):');
     for (const f of opts.fitness) lines.push(`- ${f}`);
   }
 

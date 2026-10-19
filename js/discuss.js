@@ -8,6 +8,7 @@ import { copyText } from './editor.js';
 import { buildSummary } from './summary.js';
 import { KINDS, recentVsBaseline, weeklyMinutes } from './fitness.js';
 import { fmtNum } from './format.js';
+import { homeAverage } from './bp-eval.js';
 
 export function discussButton(key) {
   return h('a', { class: 'btn', href: key ? `#/discuss/${encodeURIComponent(key)}` : '#/discuss' }, 'Discuss with Claude');
@@ -33,7 +34,7 @@ export function viewDiscuss(root, focusKey) {
     includeProfile: true,
     includeFindings: true,
     includeVaccines: !focusKey,
-    includeFitness: !focusKey && state.measures.length + state.workouts.length > 0,
+    includeFitness: !focusKey && state.measures.length + state.workouts.length + state.bp.length > 0,
     question: '',
   };
   const fitnessLines = () => {
@@ -43,6 +44,8 @@ export function viewDiscuss(root, focusKey) {
       if (!r || r.recent == null) continue;
       out.push(`${k.name}: ${fmtNum(+r.recent.toFixed(k.digits))} ${k.unit}`.trim() + (r.base != null ? ` (before: ${fmtNum(+r.base.toFixed(k.digits))})` : ''));
     }
+    const bp = homeAverage(state.bp);
+    if (bp) out.push(`Blood pressure, home average: ${Math.round(bp.sys)}/${Math.round(bp.dia)} mmHg (${bp.n} readings, ${bp.from} to ${bp.to})`);
     if (state.workouts.length) {
       const weeks = weeklyMinutes(Date.now() - 35 * 864e5).slice(0, -1).slice(-4);
       if (weeks.length) out.push(`Workouts: ${fmtNum(Math.round(weeks.reduce((a, w) => a + w.v, 0) / weeks.length))} min per week (last ${weeks.length} weeks)`);
@@ -93,7 +96,7 @@ export function viewDiscuss(root, focusKey) {
     check('Age and sex', 'includeProfile'),
     check('What the app noted (findings)', 'includeFindings'),
     check('Vaccinations', 'includeVaccines'),
-    state.measures.length + state.workouts.length ? check('Watch data (heart rate, sleep, activity)', 'includeFitness') : null,
+    state.measures.length + state.workouts.length + state.bp.length ? check('Blood pressure and watch data', 'includeFitness') : null,
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: false, onchange: (e) => { opts.history = e.target.checked ? 'recent' : 'all'; update(); } }), 'Only the last 3 results per test'),
     h('div', { class: 'btn-row' },
       h('button', { class: 'btn', type: 'button', onclick: () => { all.forEach((e) => keys.add(e.m.key)); renderTests(); update(); } }, 'All tests'),

@@ -7,6 +7,7 @@ import { viewEditor, editorDirty, clearDirty } from './editor.js';
 import { viewData, seedDemoOnce } from './data.js';
 import { viewDiscuss } from './discuss.js';
 import { viewFitness, viewFitnessKind } from './fitness.js';
+import { viewBp } from './bp.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -16,6 +17,7 @@ const ROUTES = [
   [/^#\/report\/(.+)$/, (root, id) => viewReport(root, id), 'reports'],
   [/^#\/add$/, (root) => viewEditor(root, null), 'reports'],
   [/^#\/fitness$/, (root) => viewFitness(root), 'fitness'],
+  [/^#\/bp$/, (root) => viewBp(root), 'fitness'],
   [/^#\/fitness\/(.+)$/, (root, kind) => viewFitnessKind(root, kind), 'fitness'],
   [/^#\/edit\/(.+)$/, (root, id) => viewEditor(root, id), 'reports'],
   [/^#\/vaccines$/, (root) => viewVaccines(root), 'vaccines'],

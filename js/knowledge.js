@@ -54,6 +54,12 @@ export const SOURCES = {
     title: 'Guidelines on physical activity and sedentary behaviour', url: 'https://www.who.int/publications/i/item/9789240015128' },
   aasm2015: { short: 'AASM/SRS 2015', org: 'American Academy of Sleep Medicine / Sleep Research Society', year: 2015,
     title: 'Recommended amount of sleep for a healthy adult (J Clin Sleep Med 2015;11:591–592)', url: 'https://pubmed.ncbi.nlm.nih.gov/25979105/' },
+  esc2024bp: { short: 'ESC 2024', org: 'European Society of Cardiology', year: 2024,
+    title: 'Guidelines for the management of elevated blood pressure and hypertension (Eur Heart J 2024;45:3912–4018)', url: 'https://doi.org/10.1093/eurheartj/ehae178' },
+  esh2023: { short: 'ESH 2023', org: 'European Society of Hypertension', year: 2023,
+    title: 'Guidelines for the management of arterial hypertension (J Hypertens 2023;41:1874–2071)', url: 'https://doi.org/10.1097/HJH.0000000000003480' },
+  aha_bp: { short: 'AHA', org: 'American Heart Association', year: null,
+    title: 'Understanding blood pressure readings', url: 'https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings' },
   nice239: { short: 'NICE NG239', org: 'National Institute for Health and Care Excellence', year: 2024,
     title: 'Vitamin B12 deficiency in over 16s: diagnosis and management', url: 'https://www.nice.org.uk/guidance/ng239' },
 };
