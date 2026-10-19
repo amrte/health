@@ -74,8 +74,7 @@ function quickEntry() {
     go('#/body');
   } },
     h('h2', null, 'New measurement'),
-    h('div', { class: 'bp-nums' }, QUICK.slice(0, 2).map(field)),
-    h('div', { class: 'bp-nums' }, QUICK.slice(2).map(field)),
+    h('div', { class: 'bp-nums four' }, QUICK.map(field)),
     h('div', { class: 'bp-row2' },
       h('label', null, h('span', null, 'Date'), h('input', { type: 'date', value: f.date, oninput: (e) => { f.date = e.target.value; } })),
       h('label', null, h('span', null, 'Note'), h('input', { type: 'text', placeholder: 'optional, e.g. morning, before breakfast', oninput: (e) => { f.note = e.target.value; } }))),

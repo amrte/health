@@ -1,4 +1,7 @@
-# Health Records
+# Натуральний майонез оливковий 67%
+
+A private health records app (the name and look are inspired by an olive
+mayonnaise pack: white, green ribbon, olives, no red).
 
 A private health tracker that runs in the browser. It's made for iPhone
 (Safari → *Add to Home Screen*) and works on any device. All records and photos
@@ -289,6 +292,9 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/genome.js`, `js/dna-variants.js`, `js/dna.js`, `js/dna-eval.js` | Raw DNA reader, curated variants, DNA screen, DNA + lab findings |
 | `js/body.js` | Body page: weight, waist, body composition, quick entry |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
+
+The title font is a 5 KB subset of Marck Script (SIL Open Font License),
+embedded in `css/app.css`.
 
 Results are stored as printed (value, unit and range as text) and are parsed
 and converted on load. Improvements to the catalogue therefore also apply to

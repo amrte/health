@@ -573,10 +573,15 @@ const BMI_KB = {
   pubmed: 'body mass index mortality',
   rules: [bmiRule],
 };
+// Only the newer of measured and calculated BMI is evaluated, so it isn't reported twice.
+const newest = (own, other, rule) => (p, c) => {
+  const q = c.latest(other);
+  return q && (q.t > p.t || (q.t === p.t && own === 'bmi_calc')) ? null : rule(p, c);
+};
 
 Object.assign(KB, {
-  bmi: BMI_KB,
-  bmi_calc: { ...BMI_KB, about: BMI_KB.about + ' Calculated here from your weight and the height in your profile.' },
+  bmi: { ...BMI_KB, rules: [newest('bmi', 'bmi_calc', bmiRule)] },
+  bmi_calc: { ...BMI_KB, about: BMI_KB.about + ' Calculated here from your weight and the height in your profile.', rules: [newest('bmi_calc', 'bmi', bmiRule)] },
   waist: {
     about: 'Waist circumference shows fat around the belly, which is more closely tied to diabetes and heart disease than weight alone. Measure midway between the lowest rib and the top of the hip bone, after breathing out.',
     thresholds: [

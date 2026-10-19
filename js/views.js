@@ -7,7 +7,7 @@ import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
 import { searchResults, arrowKeys } from './search.js';
 import { nextCheckup } from './dental.js';
-import { leafSprig, greeting } from './leaves.js';
+import { leafSprig, greeting, logo } from './leaves.js';
 import { todayIso } from './format.js';
 import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
@@ -52,13 +52,13 @@ function emptyState() {
       h('a', { class: 'btn', href: '#/data' }, 'Try with demo data')));
 }
 
-// Overview header: greeting, title and summary on a soft green banner with a leaf sprig.
+// Overview header: greeting, title and summary on a soft green banner with an olive sprig.
 function heroHead({ actions, sub }) {
   return h('header', { class: 'hero-banner' },
     leafSprig(),
     h('div', { class: 'hero-text' },
       h('div', { class: 'hero-greeting' }, greeting()),
-      h('h1', null, 'Health records'),
+      logo('h1'),
       sub ? h('p', { class: 'sub' }, sub) : null),
     actions ? h('div', { class: 'actions' }, actions) : null);
 }

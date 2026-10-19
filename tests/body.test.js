@@ -68,7 +68,8 @@ test('WHO BMI classes', () => {
   assert.deepEqual(lvl(26.3), [['info', 'BMI 26.3: overweight']]);
   assert.deepEqual(lvl(31), [['attention', 'BMI 31: obesity class I']]);
   assert.deepEqual(lvl(41), [['attention', 'BMI 41: obesity class III']]);
-  assert.equal(KB.bmi_calc.rules, KB.bmi.rules, 'calculated BMI uses the same rule');
+  const both = evaluate(data([['bmi', '2026-04-21', 26.3], ['bmi_calc', '2026-09-28', 26.1]]), {}, NOW).filter((f) => f.title.startsWith('BMI'));
+  assert.deepEqual(both.map((f) => [f.keys[0], f.title]), [['bmi_calc', 'BMI 26.1: overweight']], 'only the newer BMI is evaluated');
 });
 
 test('WHO waist and NICE waist-to-height thresholds', () => {

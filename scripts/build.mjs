@@ -33,5 +33,5 @@ if (html.includes('src="js/') || html.includes('href="css/')) throw new Error('U
 await mkdir(new URL('dist/', root), { recursive: true });
 await writeFile(new URL('dist/health-records.html', root), html);
 await writeFile(new URL('dist/health-records-demo.html', root),
-  html.replace('<html lang="en">', '<html lang="en" data-demo-seed="1">').replace('<title>Health Records</title>', '<title>Health Records (demo)</title>'));
+  html.replace('<html lang="en">', '<html lang="en" data-demo-seed="1">').replace('<title>Натуральний майонез оливковий 67%</title>', '<title>Натуральний майонез оливковий 67% (демо)</title>'));
 console.log(`dist/health-records.html, dist/health-records-demo.html (${Math.round(html.length / 1024)} KB each)`);
