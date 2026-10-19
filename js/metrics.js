@@ -244,6 +244,12 @@ DEFS.push(
     aliases: ['segmented neutrophils', 'segs', 'segmentkernige', 'segmentkernige neutrophile', 'segmentkernige granulozyten', 'сегментоядерні', 'нейтрофіли сегментоядерні', 'сегментоядерные', 'нейтрофилы сегментоядерные'] },
 );
 
+// Calculated from other results (see store.js), never read from a report.
+DEFS.push(
+  { key: 'egfr_calc', cat: 'kidney', name: 'eGFR (calculated)', unit: 'mL/min/1.73m²', aliases: [], derived: true },
+  { key: 'nonhdl_calc', cat: 'lipids', name: 'Non-HDL cholesterol (calculated)', unit: 'mmol/L', aliases: [], derived: true },
+);
+
 export const METRICS = DEFS.map(prepareUnits);
 const BY_KEY = new Map(METRICS.map((m) => [m.key, m]));
 
@@ -273,7 +279,7 @@ const CONTAINS = [];
 for (const m of METRICS) {
   m.notN = (m.not ?? []).map(normName).filter(Boolean);
   const names = new Set([m.key, m.name, ...m.aliases].map(normName).filter(Boolean));
-  if (m.pair && m.key.endsWith('_abs')) continue; // matched through the % twin
+  if (m.derived || (m.pair && m.key.endsWith('_abs'))) continue; // calculated, or matched through the % twin
   for (const a of names) {
     if (!EXACT.has(a)) EXACT.set(a, m.key);
     if (a.length >= 3) CONTAINS.push([a, m.key]);

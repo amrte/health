@@ -70,7 +70,7 @@ export function isoDate(s) {
 
 export function buildPrompt() {
   const list = CATEGORIES.map(([cat, title]) => {
-    const keys = METRICS.filter((m) => m.cat === cat).map((m) => `${m.key} = ${m.name}`);
+    const keys = METRICS.filter((m) => m.cat === cat && !m.derived).map((m) => `${m.key} = ${m.name}`);
     return keys.length ? `${title}: ${keys.join('; ')}` : '';
   }).filter(Boolean).join('\n');
   return `Read the attached medical lab report(s). They may be in English, German, Finnish, Ukrainian or Russian.

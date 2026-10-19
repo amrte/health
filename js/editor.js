@@ -57,7 +57,7 @@ function metricSelect(row, onchange) {
     onchange: (e) => onchange(e.target.value) },
     h('option', { value: 'custom' }, 'Not in list — keep printed name'),
     CATEGORIES.map(([cat, title]) => {
-      const ms = METRICS.filter((m) => m.cat === cat);
+      const ms = METRICS.filter((m) => m.cat === cat && !m.derived);
       return ms.length ? h('optgroup', { label: title }, ms.map((m) => h('option', { value: m.key }, `${m.name} (${m.unit || 'no unit'})`))) : null;
     }));
 }

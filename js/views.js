@@ -2,7 +2,8 @@
 
 import { h, go, toast } from './dom.js';
 import { CATEGORIES, CATEGORY_NAME } from './metrics.js';
-import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport } from './store.js';
+import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport, findingsFor } from './store.js';
+import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { fmtDate, fmtRange } from './format.js';
 import { lineChart, sparkline } from './chart.js';
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
@@ -11,6 +12,7 @@ import { protectionGroups, protectionRow, vaccineSearchText } from './vaccines.j
 const enc = encodeURIComponent;
 let overviewQuery = '';
 let reportsQuery = '';
+let showAllFindings = false;
 
 function searchBox(value, placeholder, oninput) {
   return h('input', { type: 'search', class: 'search', placeholder, value, 'aria-label': placeholder,
@@ -57,6 +59,24 @@ export function viewOverview(root) {
   function render() {
     const entries = [...state.byMetric.values()].filter((e) => matches(overviewQuery, metricSearchText(e)));
     const out = [];
+    if (!overviewQuery) {
+      const important = state.findings.filter((f) => f.level === 'alert' || f.level === 'attention');
+      if (important.length) {
+        const shown = showAllFindings ? important : important.slice(0, 4);
+        out.push(h('section', { class: 'group' },
+          h('h2', null, 'Findings'),
+          h('div', { class: 'card findings' },
+            shown.map((f) => findingItem(f, { link: `#/test/${enc(f.keys[0])}` })),
+            important.length > shown.length
+              ? h('button', { class: 'btn', type: 'button', onclick: () => { showAllFindings = true; render(); } }, `Show all ${important.length}`)
+              : null)));
+      }
+      if (!state.profile.sex || !state.profile.birthYear) {
+        out.push(h('a', { class: 'card hint-card', href: '#/data' },
+          h('strong', null, 'Add your sex and birth year'),
+          h('span', null, ' — some guideline limits (hemoglobin, HDL, ALT, kidney function) depend on them.')));
+      }
+    }
     const due = protectionGroups().filter((p) => p.status === 'overdue' || p.status === 'soon');
     if (due.length && !overviewQuery) {
       out.push(h('section', { class: 'group' },
@@ -98,6 +118,7 @@ export function viewMetric(root, key) {
     h('div', { class: 'hero-label' }, 'Latest · ', fmtDate(last.o.date), labOf(last.o) ? ' · ' + labOf(last.o) : ''),
     h('div', { class: 'hero-value' }, valueText(last, unit)),
     statusChip(last.status)));
+  root.append(findingsCard(findingsFor(key), { empty: m.custom ? null : 'No findings for this test.' }));
 
   const chartCard = h('section', { class: 'card' });
   root.append(chartCard);
@@ -123,6 +144,7 @@ export function viewMetric(root, key) {
           statusChip(p.status, { compact: true })),
         h('td', { class: 'small' }, p.lo != null || p.hi != null ? fmtRange(p.lo, p.hi) : p.o.refRaw || '—')))))),
     h('p', { class: 'caption' }, `Results and reference ranges in ${unit || 'the printed unit'}.`)));
+  root.append(aboutCard(key));
 }
 
 function reportRow(r) {

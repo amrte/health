@@ -9,18 +9,25 @@ import { getMetric, normName, CATEGORY_NAME } from './metrics.js';
 import { normUnit, convert } from './units.js';
 import { parseValue, parseRange } from './parse.js';
 import { dateMs } from './format.js';
+import { calculatedObs } from './calc.js';
+import { evaluate } from './evaluate.js';
 
 export const state = {
   reports: [],
   obs: [],
   vaccines: [],
+  profile: {}, // { sex: 'female' | 'male' | '', birthYear }
+  findings: [],
   reportById: new Map(),
   byMetric: new Map(), // key → { m, pts }
   obsByReport: new Map(),
 };
 
 export async function load() {
-  [state.reports, state.obs, state.vaccines] = await Promise.all([db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines')]);
+  let profile;
+  [state.reports, state.obs, state.vaccines, profile] = await Promise.all([
+    db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile')]);
+  state.profile = profile ?? {};
   derive();
 }
 
@@ -77,11 +84,28 @@ export function derive() {
     state.obsByReport.get(o.reportId).push(o);
   }
   state.byMetric = new Map();
-  for (const [key, list] of groups) {
+  const add = (key, list) => {
     const m = getMetric(key) ?? customMetric(key, list);
     const pts = list.map((o) => point(o, m)).sort((a, b) => a.t - b.t);
     state.byMetric.set(key, { m, pts, last: pts[pts.length - 1] });
+  };
+  for (const [key, list] of groups) add(key, list);
+  const calc = new Map();
+  for (const o of calculatedObs((key) => state.byMetric.get(key)?.pts ?? [], state.profile)) {
+    if (!calc.has(o.metric)) calc.set(o.metric, []);
+    calc.get(o.metric).push(o);
   }
+  for (const [key, list] of calc) add(key, list);
+  state.findings = evaluate(state.byMetric, state.profile);
+}
+
+export function findingsFor(key) {
+  return state.findings.filter((f) => f.keys.includes(key));
+}
+
+export async function saveProfile(profile) {
+  await db.write({ put: { settings: [{ id: 'profile', ...profile }] } });
+  await load();
 }
 
 export function metricOf(key) {

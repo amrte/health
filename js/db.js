@@ -1,8 +1,8 @@
 // IndexedDB storage. Everything stays in this browser on this device.
 
 const NAME = 'health-records';
-const VERSION = 1;
-export const STORES = ['reports', 'obs', 'files', 'vaccines'];
+const VERSION = 2;
+export const STORES = ['reports', 'obs', 'files', 'vaccines', 'settings'];
 
 let opening;
 function open() {
@@ -10,10 +10,12 @@ function open() {
     const req = indexedDB.open(NAME, VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      db.createObjectStore('reports', { keyPath: 'id' });
-      db.createObjectStore('obs', { keyPath: 'id' }).createIndex('reportId', 'reportId');
-      db.createObjectStore('files', { keyPath: 'id' });
-      db.createObjectStore('vaccines', { keyPath: 'id' });
+      const has = (s) => db.objectStoreNames.contains(s);
+      if (!has('reports')) db.createObjectStore('reports', { keyPath: 'id' });
+      if (!has('obs')) db.createObjectStore('obs', { keyPath: 'id' }).createIndex('reportId', 'reportId');
+      if (!has('files')) db.createObjectStore('files', { keyPath: 'id' });
+      if (!has('vaccines')) db.createObjectStore('vaccines', { keyPath: 'id' });
+      if (!has('settings')) db.createObjectStore('settings', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

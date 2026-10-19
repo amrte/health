@@ -2,7 +2,7 @@
 
 import { h, toast, go } from './dom.js';
 import * as db from './db.js';
-import { state, load } from './store.js';
+import { state, load, saveProfile } from './store.js';
 import { fmtBytes, todayIso } from './format.js';
 import { pageHead } from './ui.js';
 import { demoData } from './demo.js';
@@ -27,6 +27,7 @@ async function exportBackup() {
     reports: state.reports,
     obs: state.obs,
     vaccines: state.vaccines,
+    profile: state.profile,
     files: await Promise.all(files.map(async (f) => ({ id: f.id, type: f.type, name: f.name, data: await blobToDataUrl(f.blob) }))),
   };
   const name = `health-backup-${todayIso()}.json`;
@@ -59,7 +60,8 @@ async function importBackup(file) {
   const vaccines = Array.isArray(data.vaccines) ? data.vaccines : [];
   if (!confirm(`Import ${data.reports.length} reports, ${data.obs.length} results, ${vaccines.length} vaccinations and ${data.files?.length ?? 0} photos? Records that already exist here are replaced by the backup's version.`)) return;
   const files = await Promise.all((data.files ?? []).map(async (f) => ({ id: f.id, type: f.type, name: f.name, blob: await (await fetch(f.data)).blob() })));
-  await db.write({ put: { reports: data.reports, obs: data.obs, vaccines, files } });
+  const settings = data.profile && typeof data.profile === 'object' ? [{ ...data.profile, id: 'profile' }] : [];
+  await db.write({ put: { reports: data.reports, obs: data.obs, vaccines, files, settings } });
   await load();
   toast('Backup imported');
   go('#/');
@@ -94,8 +96,28 @@ async function deleteAll() {
   go('#/');
 }
 
+function profileCard() {
+  const p = { sex: state.profile.sex ?? '', birthYear: state.profile.birthYear ?? '' };
+  const thisYear = new Date().getFullYear();
+  return h('section', { class: 'card form' },
+    h('h2', null, 'Profile'),
+    h('p', { class: 'muted small' }, 'Used only on this device, for guideline limits that differ by sex or age and to calculate eGFR from creatinine.'),
+    h('label', null, h('span', null, 'Sex (as used for lab reference values)'),
+      h('select', { value: p.sex, onchange: (e) => { p.sex = e.target.value; } },
+        h('option', { value: '' }, 'Not set'), h('option', { value: 'female' }, 'Female'), h('option', { value: 'male' }, 'Male'))),
+    h('label', null, h('span', null, 'Birth year'),
+      h('input', { type: 'text', inputmode: 'numeric', value: String(p.birthYear), placeholder: 'e.g. 1985', oninput: (e) => { p.birthYear = e.target.value; } })),
+    h('div', null, h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+      const y = Number(p.birthYear);
+      if (p.birthYear && !(y > 1900 && y <= thisYear)) { toast('Enter a 4-digit birth year'); return; }
+      await saveProfile({ sex: p.sex, birthYear: p.birthYear ? y : null });
+      toast('Profile saved');
+    } }, 'Save profile')));
+}
+
 export async function viewData(root) {
   root.append(pageHead('Data & backup'));
+  root.append(profileCard());
 
   const fileIn = h('input', { type: 'file', accept: 'application/json,.json', class: 'offscreen', id: 'backup-in',
     onchange: (e) => { if (e.target.files[0]) importBackup(e.target.files[0]); e.target.value = ''; } });
