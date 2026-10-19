@@ -198,7 +198,7 @@ export function toRow(r) {
   let metric = r.metric && getMetric(r.metric) ? r.metric : matchMetric(name, unit, pv.value);
   // Catalogue tests are blood values with numbers: a urine row, or "negativ" for a
   // count, is a different test that only shares the name.
-  if (metric && (isUrineName(name) || (pv.value == null && QUALITATIVE.test(valueRaw)))) metric = null;
+  if (metric && !getMetric(metric).text && (isUrineName(name) || (pv.value == null && QUALITATIVE.test(valueRaw)))) metric = null;
   const flag = /^h/i.test(r.flag ?? '') ? 'H' : /^l/i.test(r.flag ?? '') ? 'L' : pv.flag;
   const nameEn = String(r.name_en ?? r.nameEn ?? '').trim();
   return { name, ...(nameEn ? { nameEn } : {}), metric: metric ?? '', valueRaw, unit, refRaw, flag, date: isoDate(r.date) };
@@ -251,11 +251,11 @@ export function tidyStored(obs) {
   for (const list of byReport.values()) {
     for (const r of list) {
       const pv = parseValue(r.valueRaw);
-      if (getMetric(r.metric) && (isUrineName(r.name) || (pv.value == null && QUALITATIVE.test(r.valueRaw)))) r.metric = customKey(r.name);
+      if (getMetric(r.metric) && !getMetric(r.metric).text && (isUrineName(r.name) || (pv.value == null && QUALITATIVE.test(r.valueRaw)))) r.metric = customKey(r.name);
       // Saved as an own test, but the catalogue knows the name now (and the unit fits).
-      if (r.metric?.startsWith('custom:') && pv.value != null) {
+      if (r.metric?.startsWith('custom:')) {
         const k = matchMetric(r.name, r.unit, pv.value);
-        if (k && convert(pv.value, r.unit, getMetric(k)) != null) r.metric = k;
+        if (k && (getMetric(k).text || (pv.value != null && convert(pv.value, r.unit, getMetric(k)) != null))) r.metric = k;
       }
     }
     const kept = new Set(oneValuePerDay(list, '').map((r) => r.id));

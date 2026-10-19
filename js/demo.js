@@ -80,6 +80,9 @@ export function demoData() {
       obs.push({ id: uid(), reportId: report.id, date, metric: key, name, valueRaw, unit, refRaw, flag: '' });
     }
   });
+  // The Ukrainian lab also determined the blood group (shown in the profile).
+  obs.push({ id: uid(), reportId: reports[0].id, date: reports[0].date, metric: 'blood_group', name: 'Група крові', valueRaw: 'A (II)', unit: '', refRaw: '', flag: '' },
+    { id: uid(), reportId: reports[0].id, date: reports[0].date, metric: 'rh', name: 'Резус-фактор', valueRaw: 'позитивний', unit: '', refRaw: '', flag: '' });
   const vaccines = [
     ['2016-09-12', 'Boostrix Polio', ['tetanus', 'diphtheria', 'pertussis', 'polio'], 'booster', '2026-09-12'],
     ['2021-06-02', 'FSME-Immun', ['tbe'], '3/3', '2024-06-02'],

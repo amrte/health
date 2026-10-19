@@ -3,7 +3,8 @@
 // recent illnesses. Printed (or saved as PDF) with the browser's print dialog.
 
 import { h } from './dom.js';
-import { state, riskNow } from './store.js';
+import { state, riskNow, bloodType } from './store.js';
+import { formatBloodType } from './bloodtype.js';
 import { pageHead, statusLabel } from './ui.js';
 import { fmtNum, fmtDate, todayIso, fmtRange } from './format.js';
 import { sparkline } from './chart.js';
@@ -19,18 +20,6 @@ export const KEY_TESTS = ['hb', 'wbc', 'plt', 'glucose', 'hba1c', 'chol', 'ldl',
   'tsh', 'ft4', 'ferritin', 'b12', 'vitd', 'crp', 'k', 'na', 'ntprobnp', 'weight', 'bmi', 'bmi_calc', 'waist'];
 
 // Diagnoses from doctor letters, newest first, each listed once.
-// Blood group and Rh factor, if a report had them (stored as own tests).
-const BLOOD_GROUP = /група крові|группа крови|blood group|blood type|blutgruppe|veriryhmä/i;
-const RHESUS = /резус|rhesus|rh[ -]?(factor|faktor|tekijä)|^rh\b/i;
-export function bloodGroup(obs) {
-  const latest = (re) => obs.filter((o) => re.test(o.name ?? '')).sort((a, b) => b.date.localeCompare(a.date))[0]?.valueRaw ?? '';
-  const g = latest(BLOOD_GROUP).replace(/\s+/g, ' ').replace(/\(\s*/g, '(').replace(/\s*\)/g, ')').trim();
-  const rhRaw = latest(RHESUS);
-  // Positive words first: "Rh-positiv" has a hyphen too.
-  const rh = /pos|\+|пол|поз/i.test(rhRaw) ? 'Rh+' : /neg|-|−|від|отр|ei /i.test(rhRaw) ? 'Rh−' : '';
-  return [g, rh].filter(Boolean).join(' ');
-}
-
 export function diagnosesFrom(reports) {
   const seen = new Set();
   const out = [];
@@ -106,7 +95,7 @@ function sheet() {
       h('div', { class: 'ps-meta' },
         [p.sex ? p.sex[0].toUpperCase() + p.sex.slice(1) : '', age != null ? `${age} years (born ${p.birthYear})` : '', p.height ? `${fmtNum(p.height)} cm` : '',
           weight ? `${fmtNum(weight.v)} kg (${fmtDate(weight.o.date)})` : '', p.smoker === 'yes' ? 'smoker' : p.smoker === 'no' ? 'non-smoker' : '',
-          bloodGroup(state.obs) ? `blood group ${bloodGroup(state.obs)}` : ''].filter(Boolean).join(' · '),
+          bloodType() ? `blood group ${formatBloodType(bloodType())}` : ''].filter(Boolean).join(' · '),
         h('div', null, `Printed ${fmtDate(today)}`))),
     h('div', { class: 'ps-grid' },
       h('div', null,

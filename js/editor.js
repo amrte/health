@@ -7,6 +7,7 @@
 import { h, go, toast, uid } from './dom.js';
 import { METRICS, CATEGORIES, getMetric, matchMetric, customKey } from './metrics.js';
 import { canConvert, convert, suggestUnits, unitLooksWrong, unitOptions } from './units.js';
+import { parseAbo, parseRh, formatBloodType } from './bloodtype.js';
 import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME, isDocType, textStatus } from './parse.js';
 import { state, saveReport, statusOf } from './store.js';
 import { fmtNum, fmtRange, todayIso, fmtDate } from './format.js';
@@ -92,6 +93,9 @@ function rowPreview(row, reportDate, { typical = null, onUnit = () => {} } = {})
     if (wrong.length) {
       out.push(h('div', { class: 'warn small' }, `Unusual for you — your results are usually about ${fmtNum(+typical.toPrecision(3))} ${m.unit}. Is the unit perhaps:`, unitChoices(wrong, m, onUnit)));
     }
+  } else if (m.key === 'blood_group' || m.key === 'rh') {
+    const t = formatBloodType(m.key === 'rh' ? { rh: parseRh(row.valueRaw) } : { abo: parseAbo(row.valueRaw), rh: /rh|резус/i.test(row.valueRaw) ? parseRh(row.valueRaw) : '' });
+    out.push(t ? h('span', null, `→ ${t} · shown in your profile`) : h('span', { class: 'warn' }, `“${row.valueRaw}” not understood as a ${m.key === 'rh' ? 'Rh factor' : 'blood group'}`));
   } else {
     out.push(h('span', null, `Text result “${pv.text}”`));
   }

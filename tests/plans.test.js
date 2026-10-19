@@ -270,7 +270,6 @@ test('Ukrainian reports: units in two languages, platelet indices, described ran
   const { matchMetric, getMetric } = await import('../js/metrics.js');
   const { convert, canConvert } = await import('../js/units.js');
   const { parseRange } = await import('../js/parse.js');
-  const { bloodGroup } = await import('../js/print.js');
   const cases = [['Г/л (x 10^9/L)', 'wbc', 4.34, 4.34], ['г/л (x 10^9/L)', 'hb', 145, 145], ['Т/л (x 10^12/L)', 'rbc', 4.65, 4.65],
     ['Г/л (g/L)', 'mchc', 346, 346], ['фл (fL)', 'mcv', 90.1, 90.1], ['пг (pg)', 'mch', 31.2, 31.2], ['мм/год (mm/hr)', 'esr', 2, 2], ['Г/л (G/l)', 'neut_abs', 2.5, 2.5]];
   for (const [u, k, v, want] of cases) assert.equal(convert(v, u, getMetric(k)), want, `${k} in ${u}`);
@@ -282,9 +281,23 @@ test('Ukrainian reports: units in two languages, platelet indices, described ran
   assert.deepEqual(parseRange('ризик дефіциту < 10,0; дорослі 30.0-50,0'), { low: 30, high: 50 });
   assert.deepEqual(parseRange('4,0-10,0'), { low: 4, high: 10 });
   assert.deepEqual(parseRange('siehe Befund'), { low: null, high: null });
-  const obs = [{ name: 'Група крові', valueRaw: 'O ( I )', date: '2021-06-02' }, { name: 'Резус фактор', valueRaw: 'rh ( - ) отрицательный', date: '2021-06-02' }];
-  assert.equal(bloodGroup(obs), 'O (I) Rh−');
-  assert.equal(bloodGroup([{ name: 'Blutgruppe', valueRaw: 'A', date: '2020-01-01' }, { name: 'Rhesusfaktor', valueRaw: 'Rh-positiv', date: '2020-01-01' }]), 'A Rh+');
+});
+
+test('blood group and Rh: recognised in reports, kept in the profile', async () => {
+  const { matchMetric } = await import('../js/metrics.js');
+  const { parseExtraction, tidyStored } = await import('../js/parse.js');
+  const { parseAbo, parseRh, bloodTypeFromObs, formatBloodType } = await import('../js/bloodtype.js');
+  for (const [n, k] of [['Група крові', 'blood_group'], ['Группа крови', 'blood_group'], ['Blutgruppe', 'blood_group'], ['Veriryhmä', 'blood_group'], ['ABO blood group', 'blood_group'],
+    ['Резус фактор', 'rh'], ['Rhesusfaktor', 'rh'], ['Rh(D)', 'rh'], ['Rh-vasta-aineet', null], ['Резус-антитіла', null]]) assert.equal(matchMetric(n, '', null), k, n);
+  assert.deepEqual(['O ( I )', 'A (II)', 'В (ІІІ)', 'АВ (IV)', '0', 'AB Rh+'].map(parseAbo), ['O', 'A', 'B', 'AB', 'O', 'AB']);
+  assert.deepEqual(['rh ( - ) отрицательный', 'Rh-positiv', 'негативний', 'RhD negative', '(+)'].map(parseRh), ['neg', 'pos', 'neg', 'neg', 'pos']);
+  const res = parseExtraction('```json\n' + JSON.stringify({ date: '2021-06-02', results: [{ name: 'Група крові', value: 'O ( I )', unit: '-' }, { name: 'Резус фактор', value: 'rh ( - ) отрицательный', unit: '-' }] }) + '\n```');
+  assert.deepEqual(res.rows.map((r) => r.metric), ['blood_group', 'rh'], 'text results keep their keys');
+  const obs = res.rows.map((r, i) => ({ ...r, id: String(i), reportId: 'r', date: '2021-06-02' }));
+  assert.equal(formatBloodType(bloodTypeFromObs(obs)), 'O Rh−');
+  assert.equal(formatBloodType(bloodTypeFromObs([{ metric: 'blood_group', valueRaw: 'A Rh+', date: '2020-01-01' }])), 'A Rh+');
+  const saved = [{ id: 'g', reportId: 'r', date: '2021-06-02', metric: 'custom:hrupa-krovi', name: 'Група крові', valueRaw: 'O ( I )', unit: '-' }];
+  assert.deepEqual(tidyStored(saved).put.map((o) => o.metric), ['blood_group'], 'saved own tests are re-matched');
 });
 
 test('Finnish lab app: codes, Finnish names and one-number bars', async () => {

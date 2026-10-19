@@ -405,6 +405,16 @@ DEFS.push(
     aliases: ['segmented neutrophils', 'segs', 'segmentkernige', 'segmentkernige neutrophile', 'segmentkernige granulozyten', 'сегментоядерні', 'нейтрофіли сегментоядерні', 'сегментоядерные', 'нейтрофилы сегментоядерные'] },
 );
 
+// Blood group: text results, kept in the profile too (see bloodtype.js).
+DEFS.push(
+  { key: 'blood_group', cat: 'other', name: 'Blood group (ABO)', unit: '', text: true,
+    aliases: ['blood group', 'blood type', 'abo', 'abo blood group', 'blutgruppe', 'abo blutgruppe', 'veriryhmä', 'abo veriryhmä', 'група крові', 'группа крови'],
+    not: ['rh', 'rhesus', 'резус', 'antikörper', 'antibod', 'vasta aine', 'антитіл', 'антител'] },
+  { key: 'rh', cat: 'other', name: 'Rh factor', unit: '', text: true,
+    aliases: ['rh', 'rh factor', 'rhesus factor', 'rh d', 'rhesus', 'rhesusfaktor', 'rh faktor', 'rhd', 'rh tekijä', 'резус фактор', 'резус', 'резус належність', 'резус принадлежность'],
+    not: ['antikörper', 'antibod', 'vasta aine', 'антитіл', 'антител'] },
+);
+
 // Calculated from other results (see store.js), never read from a report.
 DEFS.push(
   { key: 'egfr_calc', cat: 'kidney', name: 'eGFR (calculated)', unit: 'mL/min/1.73m²', aliases: [], derived: true },

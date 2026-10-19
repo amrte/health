@@ -13,6 +13,7 @@ import { calculatedObs } from './calc.js';
 import { evaluate } from './evaluate.js';
 import { dnaLabFindings } from './dna-eval.js';
 import { medFindings, drugGroups, takenOn } from './meds-data.js';
+import { bloodTypeFromObs } from './bloodtype.js';
 import { assessRisk, riskFindings } from './score2.js';
 import { homeAverage } from './bp-eval.js';
 import { todayIso } from './format.js';
@@ -128,6 +129,14 @@ export function riskNow() {
   const today = todayIso();
   return assessRisk({ profile: state.profile, byMetric: state.byMetric, bp: state.bp, homeAvg: homeAverage(state.bp), today,
     statinOn: (date) => state.meds.some((m) => takenOn(m, date) && drugGroups(m).has('statin')) });
+}
+
+// Blood group: as set in the profile, else from the latest lab result.
+export function bloodType() {
+  const fromLab = bloodTypeFromObs(state.obs);
+  const abo = state.profile.bloodGroup || fromLab?.abo || '';
+  const rh = state.profile.rh || fromLab?.rh || '';
+  return abo || rh ? { abo, rh, fromLab: !state.profile.bloodGroup && !state.profile.rh ? fromLab : null } : null;
 }
 
 export function findingsFor(key) {

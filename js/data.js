@@ -2,9 +2,9 @@
 
 import { h, toast, go } from './dom.js';
 import * as db from './db.js';
-import { state, load, saveProfile } from './store.js';
+import { state, load, saveProfile, bloodType } from './store.js';
 import { REGIONS } from './score2.js';
-import { fmtBytes, todayIso } from './format.js';
+import { fmtBytes, todayIso, fmtDate } from './format.js';
 import { pageHead } from './ui.js';
 import { demoData, DEMO_PROFILE } from './demo.js';
 
@@ -128,7 +128,8 @@ async function deleteAll() {
 
 function profileCard() {
   const p = { sex: state.profile.sex ?? '', birthYear: state.profile.birthYear ?? '', height: state.profile.height ?? '', smoker: state.profile.smoker ?? '',
-    riskRegion: state.profile.riskRegion ?? 'moderate', highRiskCondition: !!state.profile.highRiskCondition };
+    riskRegion: state.profile.riskRegion ?? 'moderate', highRiskCondition: !!state.profile.highRiskCondition, bloodGroup: bloodType()?.abo ?? '', rh: bloodType()?.rh ?? '' };
+  const fromLab = bloodType()?.fromLab;
   const thisYear = new Date().getFullYear();
   return h('section', { class: 'card form' },
     h('h2', null, 'Profile'),
@@ -140,6 +141,12 @@ function profileCard() {
       h('input', { type: 'text', inputmode: 'numeric', value: String(p.birthYear), placeholder: 'e.g. 1985', oninput: (e) => { p.birthYear = e.target.value; } })),
     h('label', null, h('span', null, 'Height (cm)'),
       h('input', { type: 'text', inputmode: 'decimal', value: String(p.height ?? ''), placeholder: 'e.g. 178', oninput: (e) => { p.height = e.target.value; } })),
+    h('div', { class: 'bp-row2' },
+      h('label', null, h('span', null, 'Blood group'), h('select', { value: p.bloodGroup, onchange: (e) => { p.bloodGroup = e.target.value; } },
+        [['', 'Not set'], ['O', 'O (I)'], ['A', 'A (II)'], ['B', 'B (III)'], ['AB', 'AB (IV)']].map(([k, n]) => h('option', { value: k }, n)))),
+      h('label', null, h('span', null, 'Rh factor'), h('select', { value: p.rh, onchange: (e) => { p.rh = e.target.value; } },
+        [['', 'Not set'], ['pos', 'Rh positive (+)'], ['neg', 'Rh negative (−)']].map(([k, n]) => h('option', { value: k }, n))))),
+    fromLab ? h('p', { class: 'hint' }, `From your lab result of ${fmtDate(fromLab.date)}. Save the profile to keep it.`) : null,
     h('label', null, h('span', null, 'Do you smoke?'),
       h('select', { value: p.smoker, onchange: (e) => { p.smoker = e.target.value; } },
         h('option', { value: '' }, 'Not set'), h('option', { value: 'no' }, 'No (never, or stopped)'), h('option', { value: 'yes' }, 'Yes, currently'))),
@@ -152,7 +159,8 @@ function profileCard() {
       if (p.birthYear && !(y > 1900 && y <= thisYear)) { toast('Enter a 4-digit birth year'); return; }
       const ht = Number(String(p.height).replace(',', '.'));
       if (p.height && !(ht >= 100 && ht <= 250)) { toast('Enter your height in cm, e.g. 178'); return; }
-      await saveProfile({ ...state.profile, sex: p.sex, birthYear: p.birthYear ? y : null, height: p.height ? ht : null, smoker: p.smoker, riskRegion: p.riskRegion, highRiskCondition: p.highRiskCondition });
+      await saveProfile({ ...state.profile, sex: p.sex, birthYear: p.birthYear ? y : null, height: p.height ? ht : null, smoker: p.smoker, riskRegion: p.riskRegion, highRiskCondition: p.highRiskCondition,
+        bloodGroup: p.bloodGroup, rh: p.rh });
       toast('Profile saved');
     } }, 'Save profile')));
 }

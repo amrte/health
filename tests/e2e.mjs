@@ -38,6 +38,9 @@ assert.ok(await page.getByText('Due and overdue').isVisible());
 
 step('profile and findings');
 await page.goto(base + '#/data');
+await page.getByText('From your lab result of 14 Mar 2022').waitFor();
+assert.equal(await page.getByLabel('Blood group').inputValue(), 'A');
+assert.equal(await page.getByLabel('Rh factor').inputValue(), 'pos');
 await page.locator('select').first().selectOption('male');
 await page.getByPlaceholder('e.g. 1985').fill('1980');
 await page.getByRole('button', { name: 'Save profile' }).click();
