@@ -119,5 +119,10 @@ try {
 route();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  // When an update takes over, reload once so the page and its files are the same version.
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !editorDirty() && !vaccineEditorDirty() && !dentalDirty()) location.reload();
+  });
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }

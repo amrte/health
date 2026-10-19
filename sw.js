@@ -1,5 +1,6 @@
-// Offline support: serve the app from cache, refresh the cache in the background.
-const CACHE = 'health-records-v13';
+// Offline support. Network first, so the page, styles and scripts always come from
+// the same version; the cache is the fallback when offline or the network is slow.
+const CACHE = 'health-records-v14';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/dom.js', 'js/db.js', 'js/store.js', 'js/format.js', 'js/units.js', 'js/metrics.js',
@@ -9,7 +10,8 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // 'reload' skips the browser's HTTP cache, which could otherwise mix old and new files.
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
@@ -22,15 +24,16 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   e.respondWith(caches.open(CACHE).then(async (cache) => {
-    const cached = await cache.match(e.request, { ignoreSearch: true });
-    const fresh = fetch(e.request).then((res) => {
+    const fresh = fetch(e.request, { cache: 'no-cache' }).then((res) => {
       if (res.ok) cache.put(e.request, res.clone());
       return res;
     });
-    if (cached) {
-      e.waitUntil(fresh.catch(() => {}));
-      return cached;
-    }
-    return fresh;
+    e.waitUntil(fresh.catch(() => {}));
+    const slow = new Promise((resolve) => setTimeout(resolve, 4000));
+    try {
+      const res = await Promise.race([fresh, slow]);
+      if (res) return res;
+    } catch { /* offline */ }
+    return (await cache.match(e.request, { ignoreSearch: true })) ?? fresh;
   }));
 });
