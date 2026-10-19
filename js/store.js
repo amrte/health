@@ -68,7 +68,9 @@ function customMetric(key, list) {
   for (const o of list) counts.set(normUnit(o.unit), (counts.get(normUnit(o.unit)) ?? 0) + 1);
   const cu = [...counts].sort((a, b) => b[1] - a[1])[0][0];
   const unit = list.find((o) => normUnit(o.unit) === cu)?.unit ?? '';
-  return { key, cat: 'other', name: latest.name || key.slice(7), unit, cu, altN: {}, custom: true, aliases: [] };
+  // English name from Claude when the catalogue doesn't know the test; the printed name stays searchable.
+  const named = [...list].sort((a, b) => b.date.localeCompare(a.date)).find((o) => o.nameEn);
+  return { key, cat: 'other', name: named?.nameEn || latest.name || key.slice(7), unit, cu, altN: {}, custom: true, aliases: [...new Set(list.map((o) => o.name).filter(Boolean))] };
 }
 
 // One result with its parsed and converted values.

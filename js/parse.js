@@ -127,7 +127,7 @@ export function buildPrompt(type = 'lab') {
 ${doc ? 'Summarise the document and extract every measured value' : 'Extract every test result'} and reply with only one JSON code block in this format:
 
 {"date": "YYYY-MM-DD", "lab": "${doc ? 'clinic or hospital' : type === 'body' ? 'place or device, e.g. gym name or InBody' : 'lab or clinic name'}",${doc ? ` "doctor": "doctor's name", "specialty": "e.g. cardiology", "summary": "3–6 plain-language sentences in English: why it was done, what was found, what was concluded", "conclusion": "the document's own conclusion or rhythm description, translated to English", "diagnoses": ["…"], "recommendations": ["…"], "medications": ["name dose schedule"], "follow_up": "YYYY-MM-DD if a follow-up or control date is given, else empty",` : ''} "results": [
-  {"name": "name exactly as printed", "metric": "key from the list below or null", "value": "result as printed", "unit": "unit as printed", "ref": "reference range as printed", "flag": "H, L or empty", "date": "YYYY-MM-DD, only if this row has its own date"}
+  {"name": "name exactly as printed", "name_en": "the test's usual English name", "metric": "key from the list below or null", "value": "result as printed", "unit": "unit as printed", "ref": "reference range as printed", "flag": "H, L or empty", "date": "YYYY-MM-DD, only if this row has its own date"}
 ]}
 
 Rules:
@@ -176,7 +176,8 @@ export function toRow(r) {
   // count, is a different test that only shares the name.
   if (metric && (isUrineName(name) || (pv.value == null && QUALITATIVE.test(valueRaw)))) metric = null;
   const flag = /^h/i.test(r.flag ?? '') ? 'H' : /^l/i.test(r.flag ?? '') ? 'L' : pv.flag;
-  return { name, metric: metric ?? '', valueRaw, unit, refRaw, flag, date: isoDate(r.date) };
+  const nameEn = String(r.name_en ?? r.nameEn ?? '').trim();
+  return { name, ...(nameEn ? { nameEn } : {}), metric: metric ?? '', valueRaw, unit, refRaw, flag, date: isoDate(r.date) };
 }
 
 const QUALITATIVE = /^(negativ|negative|neg\b|positiv|positive|pos\b|nicht nachweisbar|nachweisbar|spuren|trace|negatiivinen|positiivinen|негатив|позитив|не виявлено|виявлено|не обнаружено|обнаружено|[+]{1,4}$)/i;
@@ -216,7 +217,7 @@ function oneValuePerDay(rows, docDate) {
 export function tidyStored(obs) {
   const byReport = new Map();
   for (const o of obs) {
-    if (o.metric?.startsWith('custom:') || o.metric?.startsWith('calc:')) continue;
+    if (o.metric?.startsWith('calc:')) continue;
     if (!byReport.has(o.reportId)) byReport.set(o.reportId, []);
     byReport.get(o.reportId).push({ ...o });
   }
@@ -225,7 +226,13 @@ export function tidyStored(obs) {
   const del = [];
   for (const list of byReport.values()) {
     for (const r of list) {
-      if (getMetric(r.metric) && (isUrineName(r.name) || (parseValue(r.valueRaw).value == null && QUALITATIVE.test(r.valueRaw)))) r.metric = customKey(r.name);
+      const pv = parseValue(r.valueRaw);
+      if (getMetric(r.metric) && (isUrineName(r.name) || (pv.value == null && QUALITATIVE.test(r.valueRaw)))) r.metric = customKey(r.name);
+      // Saved as an own test, but the catalogue knows the name now (and the unit fits).
+      if (r.metric?.startsWith('custom:') && pv.value != null) {
+        const k = matchMetric(r.name, r.unit, pv.value);
+        if (k && convert(pv.value, r.unit, getMetric(k)) != null) r.metric = k;
+      }
     }
     const kept = new Set(oneValuePerDay(list, '').map((r) => r.id));
     for (const r of list) {

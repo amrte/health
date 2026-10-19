@@ -40,19 +40,19 @@ const DEFS = [
     not: ['a1c', 'glyk', 'glyc', 'глік', 'глик', 'mch', 'ghb'] },
   { key: 'rbc', cat: 'cbc', name: 'Red blood cells', unit: '10¹²/L', alt: { 't/l': 1 },
     aliases: ['rbc', 'erythrocytes', 'red blood cells', 'red blood cell count', 'erythrozyten', 'erytrosyytit', 'eryt', 'ery', 'еритроцити', 'эритроциты'],
-    not: ['senk', 'sediment', 'осідан', 'оседан', 'ширин', 'width', 'verteil', 'distribution', 'rdw', 'mch', 'mcv', 'volum', 'об єм', 'объем', 'вміст', 'содерж', 'концентр'] },
+    not: ['vert', 'senk', 'sediment', 'осідан', 'оседан', 'ширин', 'width', 'verteil', 'distribution', 'rdw', 'mch', 'mcv', 'volum', 'об єм', 'объем', 'вміст', 'содерж', 'концентр'] },
   { key: 'hct', cat: 'cbc', name: 'Hematocrit', unit: '%', alt: { 'l/l': 100, ratio: 100 },
     unitless: (v) => (v < 1.5 ? v * 100 : v),
     aliases: ['hct', 'hkt', 'hkr', 'ht', 'hematocrit', 'haematocrit', 'hämatokrit', 'hematokriitti', 'гематокрит'] },
   { key: 'mcv', cat: 'cbc', name: 'MCV (mean red cell volume)', unit: 'fL',
     aliases: ['mcv', 'mean corpuscular volume', 'mittleres zellvolumen', 'mittleres korpuskuläres volumen', 'середній об єм еритроцита', 'середній об єм еритроцитів', 'средний объем эритроцита', 'средний объем эритроцитов'] },
-  { key: 'mch', cat: 'cbc', name: 'MCH (mean red cell hemoglobin)', unit: 'pg', alt: { fmol: 16.114 },
+  { key: 'mch', cat: 'cbc', name: 'MCH (mean red cell hemoglobin)', unit: 'pg', alt: { fmol: 16.114, 'pg/ery': 1, 'pg/zelle': 1, 'pg/cell': 1 },
     aliases: ['mch', 'hbe', 'mean corpuscular hemoglobin', 'mittlerer hb gehalt', 'середній вміст гемоглобіну', 'средний уровень гемоглобина', 'среднее содержание гемоглобина'],
     not: ['mchc', 'konz', 'conc', 'концентр'] },
   { key: 'mchc', cat: 'cbc', name: 'MCHC', unit: 'g/L', alt: { 'g/dl': 10, 'mmol/l': 16.114 },
     aliases: ['mchc', 'mean corpuscular hemoglobin concentration', 'mittlere hb konzentration', 'середня концентрація гемоглобіну', 'средняя концентрация гемоглобина'] },
   { key: 'rdw', cat: 'cbc', name: 'RDW', unit: '%',
-    aliases: ['rdw', 'rdw cv', 'ery verteilungsbreite', 'erythrozytenverteilungsbreite', 'red cell distribution width', 'ширина розподілу еритроцитів', 'ширина распределения эритроцитов'],
+    aliases: ['rdw', 'rdw cv', 'ery verteilungsbreite', 'erythrozytenverteilungsbreite', 'erythrozyten vert', 'ery vert', 'erythrozytenverteilung', 'red cell distribution width', 'ширина розподілу еритроцитів', 'ширина распределения эритроцитов'],
     not: ['sd'] },
   { key: 'plt', cat: 'cbc', name: 'Platelets', unit: '10⁹/L', alt: COUNT,
     aliases: ['plt', 'platelets', 'platelet count', 'thrombocytes', 'thrombozyten', 'trombosyytit', 'trom', 'tromb', 'тромбоцити', 'тромбоциты'],
@@ -66,6 +66,12 @@ const DEFS = [
     aliases: ['esr', 'sed rate', 'erythrocyte sedimentation rate', 'bsg', 'bsr', 'blutsenkung', 'blutkörperchensenkung', 'blutsenkungsgeschwindigkeit', 'la', 'lasko', 'шое', 'шзе', 'соэ', 'швидкість осідання еритроцитів', 'скорость оседания эритроцитов', 'шое по вестергрену'] },
   { key: 'retic', cat: 'cbc', name: 'Reticulocytes', unit: '%', alt: { promille: 0.1 },
     aliases: ['reticulocytes', 'retikulozyten', 'retikulosyytit', 'retic', 'ретикулоцити', 'ретикулоциты'] },
+  { key: 'ret_he', cat: 'cbc', name: 'Reticulocyte hemoglobin (Ret-He)', unit: 'pg', alt: { 'pg/reti': 1, 'pg/cell': 1 },
+    aliases: ['ret he', 'reticulocyte hemoglobin', 'reticulocyte haemoglobin', 'reticulocyte hemoglobin equivalent', 'retikulozytenhämoglobin', 'retikulozyten hämoglobin', 'chr', 'ret hb', 'retikulosyyttien hemoglobiini', 'гемоглобін ретикулоцитів', 'гемоглобин ретикулоцитов'] },
+  { key: 'rpi', cat: 'cbc', name: 'Reticulocyte production index', unit: '', alt: { index: 1 },
+    aliases: ['rpi', 'reticulocyte production index', 'retikulozytenproduktionsindex', 'retikulozyten produktionsindex', 'reti produkt index', 'індекс продукції ретикулоцитів', 'индекс продукции ретикулоцитов'] },
+  { key: 'hypo', cat: 'cbc', name: 'Hypochromic red cells', unit: '%',
+    aliases: ['hypochromic red cells', 'hypochromic erythrocytes', 'hypo', 'hypo he', 'anteil hypochromer erys', 'anteil hypochromer erythrozyten', 'hypochrome erythrozyten', 'hypokromiset punasolut', 'гіпохромні еритроцити', 'гипохромные эритроциты'] },
 
   // Glucose & metabolism
   { key: 'glucose', cat: 'metabolic', name: 'Glucose', unit: 'mmol/L', alt: { 'mg/dl': 0.0555 },
@@ -122,7 +128,7 @@ const DEFS = [
   { key: 'ggt', cat: 'liver', name: 'GGT', unit: 'U/L', alt: { 'ukat/l': 60 },
     aliases: ['ggt', 'gt', 'gamma gt', 'γ gt', 'y gt', 'gamma glutamyltransferase', 'gamma glutamyl transferase', 'ггт', 'гамма гт', 'гамма глутамілтрансфераза', 'гамма глутамилтрансфераза', 'гамма глутамілтранспептидаза', 'гамма глутамилтранспептидаза'] },
   { key: 'alp', cat: 'liver', name: 'Alkaline phosphatase (ALP)', unit: 'U/L', alt: { 'ukat/l': 60 },
-    aliases: ['alp', 'ap', 'afos', 'alkaline phosphatase', 'alkalische phosphatase', 'alkalinen fosfataasi', 'лужна фосфатаза', 'щелочная фосфатаза', 'лф', 'щф'] },
+    aliases: ['alp', 'ap', 'afos', 'alkaline phosphatase', 'alkalische phosphatase', 'alk phosphatase', 'alkal phosphatase', 'alk phos', 'alkalinen fosfataasi', 'лужна фосфатаза', 'щелочная фосфатаза', 'лф', 'щф'] },
   { key: 'bili', cat: 'liver', name: 'Bilirubin (total)', unit: 'µmol/L', alt: { 'mg/dl': 17.1 },
     aliases: ['bilirubin', 'bilirubin total', 'total bilirubin', 'gesamtbilirubin', 'bilirubin gesamt', 'bilirubiini', 'bil', 'білірубін', 'білірубін загальний', 'загальний білірубін', 'билирубин', 'билирубин общий', 'общий билирубин'],
     not: ['direkt', 'direct', 'konj', 'conj', 'прям', 'indirekt', 'indirect', 'unkonj', 'kj', ...URINE] },
@@ -377,6 +383,7 @@ const DIFF = [
   ['lymph', 'Lymphocytes', ['lymphocytes', 'lymphozyten', 'lymfosyytit', 'lymf', 'lym', 'lymph', 'ly', 'лімфоцити', 'лимфоциты'], ['atyp', 'reakt']],
   ['mono', 'Monocytes', ['monocytes', 'monozyten', 'monosyytit', 'mono', 'mon', 'mo', 'моноцити', 'моноциты'], []],
   ['eos', 'Eosinophils', ['eosinophils', 'eosinophile', 'eosinophile granulozyten', 'eosinofiilit', 'eos', 'eo', 'еозинофіли', 'эозинофилы'], []],
+  ['ig', 'Immature granulocytes', ['immature granulocytes', 'unreife granulozyten', 'ig', 'kypsymättömät granulosyytit', 'незрілі гранулоцити', 'незрелые гранулоциты'], []],
   ['baso', 'Basophils', ['basophils', 'basophile', 'basophile granulozyten', 'basofiilit', 'baso', 'bas', 'ba', 'базофіли', 'базофилы'], []],
 ];
 for (const [base, name, aliases, not] of DIFF) {
@@ -480,6 +487,11 @@ export function matchMetric(name, unit = '', value = null) {
   // keep the full name first so "B 12" still means vitamin B12.
   const forms = [n];
   if (tokens.length > 1 && SPECIMEN.has(tokens[0])) forms.push(tokens.slice(1).join(' '));
+  // German written without umlauts: "Haematokrit", "Harnsaeure" → "hamatokrit", "harnsaure"
+  for (const f of [...forms]) {
+    const t = f.replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u');
+    if (t !== f) forms.push(t);
+  }
 
   let key = null;
   for (const f of forms) {

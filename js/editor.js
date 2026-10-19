@@ -70,7 +70,7 @@ function rowPreview(row, reportDate) {
   const out = [];
   if (!row.valueRaw.trim()) return h('div', { class: 'preview warn' }, 'No value — this row will be skipped.');
   if (!m) {
-    out.push(h('span', null, row.name.trim() ? `Saved as its own test “${row.name.trim()}”.` : 'Pick a test or type the printed name.'));
+    out.push(h('span', null, row.name.trim() ? `Saved as its own test “${row.nameEn && row.nameEn.toLowerCase() !== row.name.trim().toLowerCase() ? `${row.nameEn}” (printed “${row.name.trim()}”)` : `${row.name.trim()}”`}.` : 'Pick a test or type the printed name.'));
   } else if (pv.value != null && !canConvert(row.unit, m)) {
     return h('div', { class: 'preview warn' }, `Unit “${row.unit}” can’t be converted to ${m.unit}. Check the unit, or the value won’t appear on the chart.`);
   } else if (pv.value != null) {
@@ -101,7 +101,7 @@ export async function viewEditor(root, id, presetType) {
   report.type ??= 'lab';
   for (const k of ['diagnoses', 'recommendations', 'medications']) report[k] ??= [];
   const rows = existing
-    ? (state.obsByReport.get(id) ?? []).map((o) => ({ id: o.id, name: o.name, metric: o.metric, valueRaw: o.valueRaw, unit: o.unit, refRaw: o.refRaw, flag: o.flag ?? '', date: o.date === report.date ? '' : o.date }))
+    ? (state.obsByReport.get(id) ?? []).map((o) => ({ id: o.id, name: o.name, nameEn: o.nameEn ?? '', metric: o.metric, valueRaw: o.valueRaw, unit: o.unit, refRaw: o.refRaw, flag: o.flag ?? '', date: o.date === report.date ? '' : o.date }))
     : [];
   const newFiles = [];
   const removedFileIds = [];
@@ -296,7 +296,8 @@ export async function viewEditor(root, id, presetType) {
       const metric = row.metric || (row.name.trim() ? customKey(row.name) : '');
       if (!metric) continue;
       obs.push({ id: row.id ?? uid(), reportId: report.id, date: row.date || report.date, metric,
-        name: row.name.trim() || getMetric(metric)?.name || '', valueRaw: row.valueRaw.trim(), unit: row.unit.trim(), refRaw: row.refRaw.trim(), flag: row.flag ?? '' });
+        name: row.name.trim() || getMetric(metric)?.name || '', ...(row.nameEn && metric.startsWith('custom:') ? { nameEn: row.nameEn } : {}),
+        valueRaw: row.valueRaw.trim(), unit: row.unit.trim(), refRaw: row.refRaw.trim(), flag: row.flag ?? '' });
     }
     if (!obs.length && !report.files.length && !confirm('This report has no results and no photos. Save anyway?')) return;
     report.updated = new Date().toISOString();

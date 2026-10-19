@@ -97,7 +97,7 @@ const reply = '```json\n' + JSON.stringify({
     { name: 'B-Hb', metric: 'hb', value: '139', unit: 'g/l', ref: '134-167', flag: '' },
     { name: 'Leukozyten', metric: 'wbc', value: '11,2', unit: '/nl', ref: '3,9-10,2', flag: 'H' },
     { name: 'Холестерин ЛПНЩ', metric: null, value: '3,6', unit: 'ммоль/л', ref: '< 3,0' },
-    { name: 'Mystery marker', metric: null, value: '12', unit: 'xyz/l', ref: '0-20' },
+    { name: 'Mystery marker', name_en: 'Secret marker', metric: null, value: '12', unit: 'xyz/l', ref: '0-20' },
     { name: 'Nitrit (Urin)', metric: null, value: 'positiv', unit: '', ref: 'negativ' },
   ],
 }) + '\n```';
@@ -118,6 +118,7 @@ await urine.getByRole('button', { name: 'Use the report date' }).click();
 await shot('04-editor');
 await page.getByRole('button', { name: 'Save', exact: true }).click();
 await page.locator('h1', { hasText: '30 Sept 2026' }).or(page.locator('h1', { hasText: '30 Sep 2026' })).waitFor();
+await page.locator('.row-title', { hasText: 'Secret marker' }).waitFor(); // English name, printed name below
 await shot('05-report');
 assert.ok(await page.getByText('Mystery marker').isVisible());
 

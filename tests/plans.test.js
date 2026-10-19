@@ -244,3 +244,24 @@ test('qualitative results, and tidying results saved earlier', async () => {
   assert.deepEqual(fix.del, ['5']);
   assert.deepEqual(tidyStored(saved.filter((o) => o.id !== '5').map((o) => fix.put.find((x) => x.id === o.id) ?? o)), { put: [], del: [] }, 'running it again changes nothing');
 });
+
+test('German report names, English names for unknown tests, re-matching saved own tests', async () => {
+  const { matchMetric } = await import('../js/metrics.js');
+  const { parseExtraction, tidyStored } = await import('../js/parse.js');
+  const cases = [['Haematokrit', '%', 'hct'], ['HbE (MCH)', 'pg/Ery', 'mch'], ['Erythrozyten-Vert.', '%', 'rdw'], ['Erythrozyten', '10^12/l', 'rbc'],
+    ['Unreife Granulozyten', '%', 'ig_pct'], ['Unreife Granulozyten', '10^9/l', 'ig_abs'], ['Anteil hypochromer Erys', '%', 'hypo'],
+    ['Reti-Produkt.-Index(RPI)', 'Index', 'rpi'], ['Retikulozytenhämoglobin', 'pg/Reti', 'ret_he'], ['Harnsaeure (Serum)', 'mg/dl', 'uric'],
+    ['Alk. Phosphatase', 'U/l', 'alp'], ['IgG', 'g/l', null]];
+  for (const [n, u, k] of cases) assert.equal(matchMetric(n, u, 1), k, n);
+  const res = parseExtraction('```json\n{"date": "2025-07-09", "lab": "Testlabor", "results": [{"name": "Glasmarker X", "name_en": "Glass marker X", "metric": null, "value": "3", "unit": "U/l"}]}\n```');
+  assert.equal(res.rows[0].nameEn, 'Glass marker X');
+  const saved = [
+    { id: 'a', reportId: 'r', date: '2025-07-09', metric: 'custom:unreife-granulozyten', name: 'Unreife Granulozyten', valueRaw: '1', unit: '%' },
+    { id: 'b', reportId: 'r', date: '2025-07-09', metric: 'custom:unreife-granulozyten', name: 'Unreife Granulozyten', valueRaw: '0.07', unit: '10^9/l' },
+    { id: 'c', reportId: 'r', date: '2025-07-09', metric: 'custom:retikulozytenhamoglobin', name: 'Retikulozytenhämoglobin', valueRaw: '34.3', unit: 'pg/Reti' },
+    { id: 'd', reportId: 'r', date: '2025-07-09', metric: 'custom:glasmarker-x', name: 'Glasmarker X', valueRaw: '3', unit: 'U/l' },
+  ];
+  assert.deepEqual(tidyStored(saved).put.map((o) => [o.id, o.metric]), [['a', 'ig_pct'], ['b', 'ig_abs'], ['c', 'ret_he']]);
+  const custom = point({ id: 'x', reportId: 'r', date: '2025-07-09', metric: 'custom:glasmarker-x', name: 'Glasmarker X', nameEn: 'Glass marker X', valueRaw: '3', unit: 'U/l' }, null);
+  assert.equal(custom.raw, 3);
+});
