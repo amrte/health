@@ -10,6 +10,7 @@
 
 import { fmtNum, fmtDate } from './format.js';
 import { normUnit } from './units.js';
+import { DNA_SOURCES } from './dna-variants.js';
 
 export const REVIEWED = '2026-10-19';
 
@@ -78,6 +79,12 @@ export const SOURCES = {
     title: 'Guidelines for the diagnosis and treatment of acute and chronic heart failure (Eur Heart J 2021;42:3599)', url: 'https://doi.org/10.1093/eurheartj/ehab368' },
   ase2015: { short: 'ASE/EACVI 2015', org: 'American Society of Echocardiography / EACVI', year: 2015,
     title: 'Recommendations for cardiac chamber quantification by echocardiography in adults', url: 'https://academic.oup.com/ehjcimaging/article/16/3/233/2400086' },
+  score2: { short: 'SCORE2 2021', org: 'SCORE2 working group and ESC Cardiovascular Risk Collaboration', year: 2021,
+    title: 'SCORE2 risk prediction algorithms: new models to estimate 10-year risk of cardiovascular disease in Europe (Eur Heart J 2021;42:2439)', url: 'https://doi.org/10.1093/eurheartj/ehab309' },
+  esc2021prev: { short: 'ESC 2021 prevention', org: 'European Society of Cardiology', year: 2021,
+    title: 'Guidelines on cardiovascular disease prevention in clinical practice (Eur Heart J 2021;42:3227)', url: 'https://academic.oup.com/eurheartj/article/42/34/3227/6358713' },
+  heartscore: { short: 'ESC HeartScore', org: 'European Society of Cardiology', year: null,
+    title: 'European risk regions for SCORE2', url: 'https://www.heartscore.org/en_GB/heartscore-europe-risk-regions' },
   who_bmi: { short: 'WHO Europe', org: 'World Health Organization, Regional Office for Europe', year: null,
     title: 'A healthy lifestyle – WHO recommendations (BMI classification for adults)', url: 'https://www.who.int/europe/news-room/fact-sheets/item/a-healthy-lifestyle---who-recommendations' },
   who2008waist: { short: 'WHO 2008', org: 'World Health Organization', year: 2008,
@@ -87,6 +94,9 @@ export const SOURCES = {
   nice239: { short: 'NICE NG239', org: 'National Institute for Health and Care Excellence', year: 2024,
     title: 'Vitamin B12 deficiency in over 16s: diagnosis and management', url: 'https://www.nice.org.uk/guidance/ng239' },
 };
+
+// Pharmacogenetic guidelines, used by the medicine checks.
+for (const id of ['cpic_statin', 'cpic_clopi', 'cpic_warfarin']) SOURCES[id] ??= { org: 'CPIC', year: null, ...DNA_SOURCES[id] };
 
 const ML = (slug, title) => ({ short: 'MedlinePlus', org: 'U.S. National Library of Medicine', year: null, title: `MedlinePlus: ${title}`, url: `https://medlineplus.gov/${slug}` });
 Object.assign(SOURCES, {
@@ -544,7 +554,7 @@ function egfrRule(p, c, key) {
   const cat = p.v >= 45 ? 'G3a' : p.v >= 30 ? 'G3b' : p.v >= 15 ? 'G4' : 'G5';
   if (span >= 90) return F('alert', `eGFR below 60 for over 3 months (${cat})`,
     `Results below 60 from ${fmtDate(low[0].o.date)} to ${fmtDate(low[low.length - 1].o.date)}. A reduced eGFR lasting at least 3 months meets the KDIGO definition of chronic kidney disease.`, ['kdigo2024']);
-  return F('attention', `eGFR in category ${cat}`, `${v(p.v, 'mL/min/1.73m²')} is below 60. KDIGO speaks of chronic kidney disease only if this persists for at least 3 months, so a repeat test matters.`, ['kdigo2024']);
+  return { ...F('attention', `eGFR in category ${cat}`, `${v(p.v, 'mL/min/1.73m²')} is below 60. KDIGO speaks of chronic kidney disease only if this persists for at least 3 months, so a repeat test matters.`, ['kdigo2024']), retest: { months: 3, what: 'creatinine / eGFR', source: 'kdigo2024' } };
 }
 
 // ---- patterns across tests ---------------------------------------------------
@@ -678,7 +688,7 @@ export const PATTERNS = [
     }
     if (t.status === 'high' && f.status === 'normal') {
       return { keys: ['tsh', 'ft4'], level: t.v > 10 ? 'alert' : 'attention', title: 'Pattern of subclinical hypothyroidism',
-        text: `TSH ${v(t.v, 'mU/L')} above range with normal free T4. ETA recommends repeating TSH and free T4 (with TPO antibodies) after 2–3 months.` + (t.v > 10 ? ' With TSH above 10 mU/L, ETA recommends treatment for people under 65–70 even without symptoms.' : ''), sources: ['eta2013'] };
+        text: `TSH ${v(t.v, 'mU/L')} above range with normal free T4. ETA recommends repeating TSH and free T4 (with TPO antibodies) after 2–3 months.` + (t.v > 10 ? ' With TSH above 10 mU/L, ETA recommends treatment for people under 65–70 even without symptoms.' : ''), sources: ['eta2013'], retest: { months: 3, what: 'TSH, free T4 and TPO antibodies', source: 'eta2013' } };
     }
     if (t.status === 'low' && f.status === 'normal') {
       return { keys: ['tsh', 'ft4'], level: 'attention', title: `Pattern of subclinical hyperthyroidism (grade ${t.v < 0.1 ? 2 : 1})`,

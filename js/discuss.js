@@ -34,6 +34,7 @@ export function viewDiscuss(root, focusKey) {
     includeProfile: true,
     includeFindings: true,
     includeVaccines: !focusKey,
+    includeMeds: state.meds.length > 0,
     includeFitness: !focusKey && state.measures.length + state.workouts.length + state.bp.length > 0,
     question: '',
   };
@@ -55,7 +56,7 @@ export function viewDiscuss(root, focusKey) {
 
   const preview = h('pre', { class: 'summary-preview' });
   const update = () => {
-    preview.textContent = buildSummary(state.byMetric, { ...opts, profile: state.profile, findings: state.findings, vaccines: state.vaccines,
+    preview.textContent = buildSummary(state.byMetric, { ...opts, profile: state.profile, findings: state.findings, vaccines: state.vaccines, meds: state.meds,
       fitness: opts.includeFitness ? fitnessLines() : [] });
     count.textContent = `${keys.size} of ${all.length} tests`;
   };
@@ -98,6 +99,7 @@ export function viewDiscuss(root, focusKey) {
     h('div', { class: 'group-head' }, h('h2', null, 'What to include'), count),
     check('Age and sex', 'includeProfile'),
     check('What the app noted (findings)', 'includeFindings'),
+    state.meds.length ? check('Medicines and allergies', 'includeMeds') : null,
     check('Vaccinations', 'includeVaccines'),
     state.measures.length + state.workouts.length + state.bp.length ? check('Blood pressure and watch data', 'includeFitness') : null,
     h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: false, onchange: (e) => { opts.history = e.target.checked ? 'recent' : 'all'; update(); } }), 'Only the last 3 results per test'),

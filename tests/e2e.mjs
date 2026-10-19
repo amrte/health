@@ -153,6 +153,48 @@ await page.goto(base + '#/test/muscle_mass');
 await page.getByText('About this test').waitFor();
 assert.equal(await page.locator('.page-head .back').getAttribute('href'), '#/body');
 
+step('medicines and allergies');
+await page.goto(base + '#/meds');
+await page.getByText('Atorvastatin and your SLCO1B1 result').waitFor();
+await page.goto(base + '#/meds/add/medicine');
+await page.getByLabel('Name', { exact: true }).fill('Amoxicillin');
+await page.getByLabel('Strength').fill('500 mg');
+await page.getByRole('button', { name: 'Save', exact: true }).click();
+await page.getByText('Amoxicillin: check against your allergy to Penicillin').waitFor();
+await shot('05d-meds');
+await page.goto(base + '#/test/ferritin');
+await page.getByText('Medicines that affect this test').waitFor();
+assert.equal(await page.locator('.chart .period-med').count(), 1, 'iron shown on the ferritin chart');
+
+step('timeline, illness diary and reminders');
+await page.goto(base + '#/timeline');
+await page.getByText('+ Add an illness or event').click();
+await page.getByPlaceholder('e.g. Flu, knee surgery, trip to Thailand').fill('Stomach flu');
+await page.locator('.add-event').getByRole('button', { name: 'Save' }).click();
+await page.getByText('Stomach flu').waitFor();
+await page.getByRole('button', { name: 'Medicines' }).click();
+assert.ok(!(await page.getByText('Stomach flu').isVisible()), 'filter hides diary entries');
+await shot('05e-timeline');
+await page.goto(base + '#/test/crp');
+await page.locator('.chart svg').waitFor();
+assert.ok(await page.locator('.chart .period-ill').count() >= 1, 'illnesses shaded on the chart');
+await page.goto(base + '#/test/hb');
+await page.getByRole('button', { name: /Remind me to retest/ }).click();
+await page.getByText(/Reminder set for/).waitFor();
+await page.goto(base + '#/reminders');
+await page.getByText('Repeat Hemoglobin').waitFor();
+assert.ok(await page.getByText('Repeat TSH, free T4 and TPO antibodies').isVisible(), 'ETA retest suggested');
+assert.ok(await page.getByText('Gesundheits-Check-up', { exact: true }).isVisible(), 'German check-up listed');
+await page.locator('.screening-row', { hasText: 'Skin cancer screening' }).getByText('Mark done').click();
+await page.locator('.screening-row', { hasText: 'Skin cancer screening' }).getByRole('button', { name: 'Save' }).click();
+await page.locator('.screening-row', { hasText: 'Skin cancer screening' }).getByText(/Next/).waitFor();
+await shot('05f-reminders');
+
+step('heart risk score');
+await page.goto(base + '#/heart');
+await page.getByText('10-year heart risk (SCORE2)').waitFor();
+assert.match(await page.locator('.risk-card').textContent(), /\d+(\.\d)? %.*risk/);
+
 step('vaccinations from a Claude reply');
 await page.goto(base + '#/vaccines/add');
 await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ vaccinations: [

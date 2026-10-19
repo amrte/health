@@ -72,6 +72,23 @@ export function buildSummary(byMetric, opts) {
     for (const f of opts.fitness) lines.push(`- ${f}`);
   }
 
+  if (opts.includeMeds && opts.meds?.length) {
+    const today = opts.today ?? new Date().toISOString().slice(0, 10);
+    const allergies = opts.meds.filter((m) => m.kind === 'allergy');
+    const taken = opts.meds.filter((m) => m.kind !== 'allergy');
+    if (allergies.length) {
+      lines.push('', 'Allergies and intolerances:');
+      for (const a of allergies) lines.push(`- ${a.name}${a.reaction ? `: ${a.reaction}` : ''}${a.severity ? ` (${a.severity})` : ''}`);
+    }
+    if (taken.length) {
+      lines.push('', 'Medicines and supplements (with dates, to relate them to the results):');
+      for (const m of [...taken].sort((a, b) => (a.start ?? '').localeCompare(b.start ?? ''))) {
+        const when = m.stop && m.stop < today ? `${m.start || '?'} to ${m.stop}` : m.start ? `since ${m.start}` : 'dates not recorded';
+        lines.push(`- ${m.name}${m.ingredient && m.ingredient.toLowerCase() !== m.name.toLowerCase() ? ` (${m.ingredient})` : ''}${m.dose ? ` ${m.dose}` : ''}${m.schedule ? `, ${m.schedule}` : ''}${m.reason ? `, for ${m.reason}` : ''}: ${when}`);
+      }
+    }
+  }
+
   if (opts.includeVaccines && opts.vaccines?.length) {
     lines.push('', 'Vaccinations:');
     for (const v of [...opts.vaccines].sort((a, b) => a.date.localeCompare(b.date))) {

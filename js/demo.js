@@ -90,10 +90,10 @@ export function demoData() {
   const { dental, files } = demoDental();
   demoHeartAndLetters(reports, obs);
   demoBody(reports, obs);
-  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes(), dental, files };
+  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes(), dental, meds: demoMeds(), events: demoEvents(), files };
 }
 
-export const DEMO_PROFILE = { sex: 'male', birthYear: 1980, height: 181 };
+export const DEMO_PROFILE = { sex: 'male', birthYear: 1980, height: 181, smoker: 'no', riskRegion: 'moderate' };
 
 // Six months of made-up watch data: night-time heart rate, HRV, sleep, steps and
 // 2–4 workouts a week. The last week shows a cold: higher heart rate, lower HRV.
@@ -282,4 +282,31 @@ function demoBody(reports, obs) {
   for (const [date, w, waist] of [['2025-01-06', '89,4', '100'], ['2025-06-15', '89,8', '101'], ['2026-01-04', '88,7', '99'], ['2026-07-02', '86,0', '97,5'], ['2026-09-28', '85,6', '97']]) {
     add({ date, lab: 'Own measurement', source: 'manual', note: 'Morning, before breakfast (demo).' }, [['weight', 'Weight', w, 'kg'], ['waist', 'Waist', waist, 'cm']]);
   }
+}
+
+// Made-up medicines, supplements and an allergy for the fictional man.
+export function demoMeds() {
+  const now = new Date().toISOString();
+  return [
+    { kind: 'allergy', name: 'Penicillin', reaction: 'Skin rash', severity: 'mild', start: '2004-07-01', note: 'As a child, after amoxicillin (demo).' },
+    { kind: 'medicine', name: 'Atorvastatin', ingredient: 'atorvastatin', dose: '20 mg', schedule: '1 tablet in the evening', reason: 'cholesterol', start: '2026-06-01' },
+    { kind: 'medicine', name: 'Retafer', ingredient: 'ferrous sulfate', dose: '100 mg', schedule: '1 tablet every other day', reason: 'low ferritin', start: '2026-05-25' },
+    { kind: 'supplement', name: 'Vitamin D3', ingredient: 'colecalciferol', dose: '20 µg', schedule: '1 a day, October to April', reason: 'winter', start: '2025-10-15', stop: '2026-04-15' },
+    { kind: 'supplement', name: 'Vitamin D3', ingredient: 'colecalciferol', dose: '20 µg', schedule: '1 a day, October to April', reason: 'winter', start: '2026-10-01' },
+    { kind: 'medicine', name: 'Ibuprofen', ingredient: 'ibuprofen', dose: '400 mg', schedule: 'as needed', reason: 'flu', start: '2025-02-03', stop: '2025-02-09' },
+  ].map((m) => ({ id: uid(), ingredient: '', dose: '', schedule: '', reason: '', start: '', stop: '', reaction: '', severity: '', note: '', ...m, demo: true, created: now }));
+}
+
+// Made-up illness diary and one reminder; the latest cold matches the watch data.
+export function demoEvents(today = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const day = (n) => { const x = new Date(today.getFullYear(), today.getMonth(), today.getDate() + n); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
+  const now = new Date().toISOString();
+  return [
+    { kind: 'illness', title: 'Cold', date: '2023-11-12', end: '2023-11-17', note: 'Sore throat, no fever (demo).' },
+    { kind: 'travel', title: 'Trip to Thailand', date: '2024-01-10', end: '2024-01-24', note: '' },
+    { kind: 'illness', title: 'Flu', date: '2025-02-03', end: '2025-02-10', note: 'Fever up to 38.9 °C, 4 days sick leave (demo).' },
+    { kind: 'illness', title: 'Cold', date: day(-6), end: day(-2), note: 'Runny nose, tired (demo).' },
+    { kind: 'reminder', title: 'Repeat ferritin', date: '2026-11-20', keys: ['ferritin'], done: '', note: 'Three months on iron.', created: '2026-05-25T09:00:00.000Z' },
+  ].map((e) => ({ id: uid(), end: '', note: '', created: now, ...e, demo: true }));
 }

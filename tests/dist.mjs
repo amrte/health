@@ -17,7 +17,7 @@ page.on('dialog', (d) => d.accept());
 await page.goto(demo);
 await page.locator('.findings .finding').first().waitFor();
 assert.match(await page.locator('.hero-banner .sub').textContent(), /20 reports/);
-assert.ok(await page.getByText('Pattern of subclinical hypothyroidism').isVisible(), 'thyroid pattern shown');
+assert.ok(await page.locator('.finding-title', { hasText: 'Pattern of subclinical hypothyroidism' }).isVisible(), 'thyroid pattern shown');
 await page.screenshot({ path: SHOTS + 'dist-overview.png' });
 
 await page.reload();

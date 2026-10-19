@@ -17,6 +17,11 @@ function sourceLinks(ids) {
   return h('div', { class: 'finding-src' }, 'Source: ', list.flatMap((s, i) => [i ? ' · ' : '', h('a', { href: s.url, target: '_blank', rel: 'noopener' }, s.short)]));
 }
 
+// Where a finding leads: its test, or the page it comes from.
+export function findingHref(f) {
+  return { fitness: '#/fitness', bp: '#/bp', meds: '#/meds', risk: '#/heart', reminder: '#/timeline' }[f.kind] ?? `#/test/${encodeURIComponent(f.keys[0])}`;
+}
+
 export function findingItem(f, { link } = {}) {
   const [icon, word] = LEVEL[f.level] ?? LEVEL.info;
   return h('div', { class: `finding lv-${f.level}` },

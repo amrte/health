@@ -15,6 +15,9 @@ import { viewDental, viewTooth, viewDentalVisit, viewDentalEditor, dentalDirty, 
 import { viewMore } from './more.js';
 import { viewHeart } from './heart.js';
 import { viewBody } from './body.js';
+import { viewMeds, viewMedEditor, viewMedsFromLetter } from './meds.js';
+import { viewTimeline, viewEventEditor } from './timeline.js';
+import { viewReminders } from './reminders.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -25,6 +28,13 @@ const ROUTES = [
   [/^#\/add(?:\/([a-z]+))?$/, (root, type) => viewEditor(root, null, type), 'reports'],
   [/^#\/heart$/, (root) => viewHeart(root), 'heart'],
   [/^#\/body$/, (root) => viewBody(root), 'body'],
+  [/^#\/meds$/, (root) => viewMeds(root), 'meds'],
+  [/^#\/meds\/add\/([a-z]+)$/, (root, kind) => viewMedEditor(root, { kind }), 'meds'],
+  [/^#\/meds\/edit\/(.+)$/, (root, id) => viewMedEditor(root, { id }), 'meds'],
+  [/^#\/meds\/import\/(.+)$/, (root, id) => viewMedsFromLetter(root, id), 'meds'],
+  [/^#\/timeline$/, (root) => viewTimeline(root), 'timeline'],
+  [/^#\/timeline\/edit\/(.+)$/, (root, id) => viewEventEditor(root, id), 'timeline'],
+  [/^#\/reminders$/, (root) => viewReminders(root), 'reminders'],
   [/^#\/fitness$/, (root) => viewFitness(root), 'fitness'],
   [/^#\/bp$/, (root) => viewBp(root), 'fitness'],
   [/^#\/dna$/, (root) => viewDna(root), 'reports'],
@@ -61,7 +71,7 @@ async function route() {
   current = location.hash;
   const [re, view, tab] = ROUTES.find(([re]) => re.test(location.hash)) ?? ROUTES[0];
   const arg = location.hash.match(re)?.[1];
-  const viaMore = ['heart', 'body', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
+  const viaMore = ['heart', 'body', 'meds', 'timeline', 'reminders', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
   for (const a of document.querySelectorAll('.tabs a')) a.toggleAttribute('aria-current', a.dataset.tab === tab || (a.dataset.tab === 'more' && viaMore));
   const root = h('div', { class: 'page' });
   main.replaceChildren(root);

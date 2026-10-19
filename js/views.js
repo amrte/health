@@ -3,7 +3,7 @@
 import { h, go, toast } from './dom.js';
 import { CATEGORIES, CATEGORY_NAME, BODY_MAIN } from './metrics.js';
 import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport, findingsFor } from './store.js';
-import { findingsCard, findingItem, aboutCard } from './insights.js';
+import { findingsCard, findingItem, aboutCard, findingHref } from './insights.js';
 import { discussButton } from './discuss.js';
 import { searchResults, arrowKeys } from './search.js';
 import { nextCheckup } from './dental.js';
@@ -14,6 +14,12 @@ import { bpFindings } from './bp-eval.js';
 import { fmtDate, fmtRange } from './format.js';
 import { REPORT_TYPES, REPORT_TYPE_NAME } from './parse.js';
 import { lineChart, sparkline } from './chart.js';
+import { metricMedsCard, medPeriods } from './meds.js';
+import { dueRows, remindButton } from './reminders.js';
+import { illnessPeriods } from './timeline.js';
+
+// Medicines (bars) and illnesses (shaded) shown on a test's chart.
+export const chartPeriods = (key) => [...medPeriods(key), ...illnessPeriods()];
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
 import { protectionGroups, protectionRow, vaccineSearchText, dueAdvice, dueAdviceRow } from './vaccines.js';
 
@@ -94,7 +100,7 @@ export function viewOverview(root) {
         out.push(h('section', { class: 'group wide' },
           h('h2', null, 'Findings'),
           h('div', { class: 'card findings' },
-            shown.map((f) => findingItem(f, { link: f.kind === 'fitness' ? '#/fitness' : f.kind === 'bp' ? '#/bp' : `#/test/${enc(f.keys[0])}` })),
+            shown.map((f) => findingItem(f, { link: findingHref(f) })),
             important.length > shown.length
               ? h('button', { class: 'btn', type: 'button', onclick: () => { showAllFindings = true; render(); } }, `Show all ${important.length}`)
               : null)));
@@ -128,10 +134,11 @@ export function viewOverview(root) {
         r.followUp < todayIso()
           ? h('span', { class: 'status st-high' }, h('span', { class: 'status-icon' }, '▲'), ` Was due ${fmtDate(r.followUp)}`)
           : h('span', { class: 'status st-soon' }, h('span', { class: 'status-icon' }, '●'), ` Due ${fmtDate(r.followUp)}`))));
-    if ((due.length || sched.length || dentRow || follow.length) && !overviewQuery) {
+    const reminderRows = dueRows();
+    if ((due.length || sched.length || dentRow || follow.length || reminderRows.length) && !overviewQuery) {
       out.push(h('section', { class: 'group wide' },
         h('h2', null, 'Due and overdue'),
-        h('div', { class: 'card list' }, follow, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
+        h('div', { class: 'card list' }, follow, reminderRows, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
     }
     const harmless = (e) => (e.last.status === 'high' && e.m.highOk) || (e.last.status === 'low' && e.m.lowOk);
     const flagged = entries.filter((e) => (e.last.status === 'high' || e.last.status === 'low') && !harmless(e));
@@ -178,18 +185,20 @@ export function viewMetric(root, key) {
         h('div', { class: 'hero-label' }, 'Latest · ', fmtDate(last.o.date), labOf(last.o) ? ' · ' + labOf(last.o) : ''),
         h('div', { class: 'hero-value' }, valueText(last, unit)),
         statusChip(last.status)),
-      h('div', { class: 'btn-row' }, discussButton(key))),
+      h('div', { class: 'btn-row' }, discussButton(key), m.custom || m.derived ? null : remindButton(key))),
     findingsCard(findingsFor(key), { empty: m.custom ? null : 'No findings for this test.' })));
 
   const chartCard = h('section', { class: 'card' });
   root.append(chartCard);
   const chartPts = pts.map((p) => ({ ...p, lab: labOf(p.o) }));
-  const info = lineChart(chartCard, { pts: chartPts, unit });
+  const info = lineChart(chartCard, { pts: chartPts, unit, periods: chartPeriods(key) });
   const skipped = pts.filter((p) => p.unconvertible).length;
   chartCard.append(h('p', { class: 'caption' },
     info?.band ? `Shaded: reference range ${info.band} ${unit} from the latest report that gives one. ` : '',
     pts.some((p) => p.converted) ? `Values from labs using other units are converted to ${unit}. ` : '',
     skipped ? `${skipped} result(s) not charted: unit can't be converted.` : ''));
+  const medsCard = metricMedsCard(key);
+  if (medsCard) root.append(medsCard);
 
   root.append(h('section', { class: 'group' }, h('h2', null, 'All results'),
     h('div', { class: 'card table-wrap' }, h('table', { class: 'results' },
@@ -273,6 +282,7 @@ export async function viewReport(root, id) {
       r.summary ? h('p', null, r.summary) : null,
       r.conclusion ? [h('h3', null, 'Conclusion as written'), h('p', { class: 'doc-quote' }, r.conclusion)] : null,
       list('Diagnoses', r.diagnoses), list('Recommendations', r.recommendations), list('Medications', r.medications),
+      r.medications?.length ? h('a', { class: 'btn small', href: `#/meds/import/${enc(r.id)}` }, 'Add to my medicines list…') : null,
       r.followUp ? h('p', null, h('strong', null, 'Follow-up: '), fmtDate(r.followUp)) : null,
       h('p', { class: 'muted small' }, 'Summaries made by Claude can contain mistakes — the original document attached below counts.')));
   }

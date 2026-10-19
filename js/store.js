@@ -12,6 +12,10 @@ import { dateMs } from './format.js';
 import { calculatedObs } from './calc.js';
 import { evaluate } from './evaluate.js';
 import { dnaLabFindings } from './dna-eval.js';
+import { medFindings, drugGroups, takenOn } from './meds-data.js';
+import { assessRisk, riskFindings } from './score2.js';
+import { homeAverage } from './bp-eval.js';
+import { todayIso } from './format.js';
 
 export const state = {
   reports: [],
@@ -22,6 +26,8 @@ export const state = {
   workouts: [], // { id, start, sport, durationS, distanceM, hrAvg, hrMax, kcal, load, source }
   bp: [], // { id, time: 'YYYY-MM-DDTHH:MM', sys, dia, pulse, arm, place: 'home' | 'clinic', note, source }
   genomes: [], // { id, provider, fileName, importedAt, build, total, snps: { rsid: genotype } }
+  meds: [], // { id, kind: 'medicine' | 'supplement' | 'allergy', name, ingredient, dose, schedule, reason, start, stop, reaction, severity, note }
+  events: [], // timeline: { id, kind, date, end, title, note } — illnesses, surgeries, travel, reminders, screenings
   dental: [], // visits: { id, date, clinic, dentist, currency, total, nextCheckup, note, items: [{ tooth, procedure, surfaces, … }], files }
   findings: [],
   reportById: new Map(),
@@ -31,9 +37,9 @@ export const state = {
 
 export async function load() {
   let profile;
-  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts, state.bp, state.genomes, state.dental] = await Promise.all([
+  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts, state.bp, state.genomes, state.dental, state.meds, state.events] = await Promise.all([
     db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile'),
-    db.getAll('measures'), db.getAll('workouts'), db.getAll('bp'), db.getAll('genomes'), db.getAll('dental')]);
+    db.getAll('measures'), db.getAll('workouts'), db.getAll('bp'), db.getAll('genomes'), db.getAll('dental'), db.getAll('meds'), db.getAll('events')]);
   state.profile = profile ?? {};
   derive();
 }
@@ -103,8 +109,17 @@ export function derive() {
     calc.get(o.metric).push(o);
   }
   for (const [key, list] of calc) add(key, list);
-  state.findings = evaluate(state.byMetric, state.profile).concat(dnaLabFindings(state.genomes, state.byMetric, state.profile))
+  state.findings = evaluate(state.byMetric, state.profile).concat(dnaLabFindings(state.genomes, state.byMetric, state.profile), medFindings(state.meds, state.genomes, todayIso()), riskFindings(riskNow()))
+    // With a personal LDL goal from SCORE2, the generic "depends on your risk" note is redundant.
+    .filter((f, _, all) => !(f.kind === 'guideline' && f.keys[0] === 'ldl' && f.level !== 'alert' && all.some((x) => x.kind === 'risk' && x.keys.includes('ldl'))))
     .sort((a, b) => ['alert', 'attention', 'info', 'good'].indexOf(a.level) - ['alert', 'attention', 'info', 'good'].indexOf(b.level));
+}
+
+// SCORE2 for the current data (see score2.js).
+export function riskNow() {
+  const today = todayIso();
+  return assessRisk({ profile: state.profile, byMetric: state.byMetric, bp: state.bp, homeAvg: homeAverage(state.bp), today,
+    statinOn: (date) => state.meds.some((m) => takenOn(m, date) && drugGroups(m).has('statin')) });
 }
 
 export function findingsFor(key) {
@@ -231,5 +246,25 @@ export async function saveDental(visit, { newFiles = [], removedFileIds = [] } =
 export async function deleteDental(id) {
   const v = state.dental.find((x) => x.id === id);
   await db.write({ del: { dental: [id], files: (v?.files ?? []).map((f) => f.id) } });
+  await load();
+}
+
+export async function saveMeds(items) {
+  await db.write({ put: { meds: items } });
+  await load();
+}
+
+export async function deleteMed(id) {
+  await db.write({ del: { meds: [id] } });
+  await load();
+}
+
+export async function saveEvents(items) {
+  await db.write({ put: { events: items } });
+  await load();
+}
+
+export async function deleteEvent(id) {
+  await db.write({ del: { events: [id] } });
   await load();
 }

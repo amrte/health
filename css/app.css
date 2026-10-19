@@ -648,3 +648,50 @@ mark { background: var(--accent-soft); }
 .tabs .brand { flex-direction: column; align-items: flex-start; gap: 0; }
 @media (max-width: 480px) { .hero-banner .logo { font-size: 13px; } }
 .olive-hi { fill: #fff; opacity: .35; }
+
+/* Medicines and illnesses on trend charts */
+.chart .period-med { fill: var(--olive); opacity: .75; }
+.chart .period-ill { fill: var(--info); opacity: .16; }
+.tip-med { color: var(--accent-ink); }
+.tip-ill { color: var(--info); }
+.card.list.flat { border: 0; box-shadow: none; background: transparent; margin: 0 -16px; }
+.check-row { cursor: pointer; }
+.check-row input { width: 20px; height: 20px; margin-right: 10px; flex: none; }
+.stack-tight > * + * { margin-top: 10px; }
+.allergy-list .row-title::before { content: '⚠ '; color: var(--warn-ink); }
+.btn.small { padding: 4px 10px; font-size: 13px; }
+
+/* Timeline */
+.timeline { list-style: none; margin: 0; padding: 4px 0; }
+.tl-item { display: flex; gap: 12px; padding: 10px 16px; position: relative; }
+.tl-item + .tl-item { border-top: 1px solid var(--grid); }
+.tl-icon { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; background: var(--accent-soft); color: var(--accent-ink); }
+.tl-diary .tl-icon { background: var(--warn-bg); color: var(--warn-ink); }
+.tl-meds .tl-icon { background: color-mix(in srgb, var(--olive) 22%, var(--surface)); color: var(--ink); }
+.tl-body { flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+.tl-date { font-size: 12px; color: var(--muted); font-weight: 600; }
+.add-event > summary { cursor: pointer; list-style: none; }
+.add-event > summary::-webkit-details-marker { display: none; }
+.add-event[open] > summary { margin-bottom: 10px; }
+.add-event .form { border: 0; box-shadow: none; padding: 0; }
+
+/* Reminders and screening */
+.remind-inline { display: inline-flex; gap: 6px; align-items: center; }
+.remind-inline select { width: auto; }
+.row.four { grid-template-columns: 1fr auto auto auto; }
+.row.done .row-title { color: var(--muted); text-decoration: line-through; }
+.sub-head { font-size: 13px; color: var(--muted); margin: 12px 4px 6px; font-weight: 600; }
+.mark-done { position: relative; }
+.mark-done > summary { list-style: none; cursor: pointer; }
+.mark-done > summary::-webkit-details-marker { display: none; }
+.mark-done-box { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.mark-done-box input { width: auto; }
+.screening-row { flex-wrap: wrap; }
+.risk-head { display: flex; align-items: center; gap: 16px; margin: 4px 0 10px; }
+.risk-cat { font-weight: 700; color: var(--accent-ink); }
+.row.act .row-meta { white-space: normal; }
+@media (max-width: 600px) {
+  .row.act { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .row.act > .row-main { flex: 1 1 100%; }
+  .row.act > .icon-btn { margin-left: auto; }
+}

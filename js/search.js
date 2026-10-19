@@ -13,6 +13,8 @@ import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
 import { fmtDuration } from './fitness.js';
 import { pageHead } from './ui.js';
+import { findingHref } from './insights.js';
+import { EVENT_NAME } from './timeline.js';
 import { teethState, toothName, PROCEDURE_NAME } from './dental-data.js';
 
 // App sections, with English and Ukrainian keywords.
@@ -25,6 +27,9 @@ const SECTIONS = [
   ['Vaccinations', '#/vaccines', 'vaccines vaccinations immunisation booster вакцини щеплення ревакцинація'],
   ['DNA', '#/dna', 'dna genetics 23andme tellmegen genome днк генетика геном'],
   ['Body', '#/body', 'body weight waist bmi body composition fat muscle inbody tanita scale тіло вага талія жир м’язи склад тіла'],
+  ['Medicines & allergies', '#/meds', 'medicines medications drugs pills supplements vitamins allergy allergies intolerance prescription ліки препарати вітаміни алергія рецепт'],
+  ['Timeline', '#/timeline', 'timeline history diary illness sick cold flu infection surgery travel хронологія історія щоденник хвороба застуда грип операція подорож'],
+  ['Reminders & screening', '#/reminders', 'reminders retest screening check-up colonoscopy mammography cancer нагадування повторити скринінг обстеження'],
   ['Teeth', '#/teeth', 'teeth dental dentist tooth x-ray bill filling crown зуби стоматолог зуб рентген пломба коронка'],
   ['Heart', '#/heart', 'heart cardiology ecg ekg holter echo echocardiogram серце кардіологія екг холтер ехо'],
   ['Discuss with Claude', '#/discuss', 'discuss claude ask question summary обговорити запитати claude'],
@@ -39,6 +44,8 @@ const TYPES = [
   ['vaccine', 'Vaccinations'],
   ['dna', 'DNA'],
   ['bp', 'Blood pressure'],
+  ['med', 'Medicines & allergies'],
+  ['event', 'Timeline'],
   ['dental', 'Teeth'],
   ['workout', 'Workouts'],
 ];
@@ -52,7 +59,7 @@ export function buildIndex(st = state) {
 
   const findings = [...st.findings, ...fitnessFindings(), ...bpFindings(st.bp)].filter((f) => f.level !== 'good');
   for (const f of findings) {
-    const href = f.kind === 'fitness' ? '#/fitness' : f.kind === 'bp' ? '#/bp' : `#/test/${encodeURIComponent(f.keys[0])}`;
+    const href = findingHref(f);
     add('finding', f.title, f.text, href, f.keys.map((k) => metricOf(k)?.name ?? k));
   }
 
@@ -98,6 +105,15 @@ export function buildIndex(st = state) {
   for (const s of Object.values(teethState(st.dental ?? []))) {
     if (!s.history.length) continue;
     add('dental', `Tooth ${s.tooth}`, toothName(s.tooth), `#/teeth/tooth/${s.tooth}`, 'tooth зуб', s.history.map((it) => PROCEDURE_NAME[it.procedure]));
+  }
+
+  for (const m of st.meds ?? []) {
+    add('med', m.name, m.kind === 'allergy' ? `Allergy${m.reaction ? ` · ${m.reaction}` : ''}` : [m.dose, m.schedule, m.start ? `since ${fmtDate(m.start)}` : ''].filter(Boolean).join(' · '),
+      `#/meds/edit/${encodeURIComponent(m.id)}`, m.ingredient, m.reason, m.note, m.kind === 'allergy' ? 'allergy алергія' : 'medicine ліки');
+  }
+  for (const e of st.events ?? []) {
+    if (!EVENT_NAME[e.kind]) continue;
+    add('event', e.title || EVENT_NAME[e.kind], `${EVENT_NAME[e.kind]} · ${fmtDate(e.date)}`, `#/timeline/edit/${encodeURIComponent(e.id)}`, e.note, e.date);
   }
 
   for (const w of st.workouts) {

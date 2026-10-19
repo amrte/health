@@ -48,8 +48,12 @@ function marker(p, x, y, extra = {}) {
 }
 
 // Draws the series into `host`. Points need { t, v, lo, hi, status, o }.
-export function lineChart(host, { pts, unit, height = 220 }) {
+// `periods`: [{ start, end, label, kind: 'med' | 'ill' }] (ISO dates; no end = ongoing).
+// Medicines become bars along the top, illnesses shaded columns.
+export function lineChart(host, { pts, unit, height = 220, periods = [] }) {
   const data = pts.filter((p) => p.v != null);
+  const spans = periods.map((q) => ({ ...q, t0: q.start ? Date.parse(q.start) : -Infinity, t1: q.end ? Date.parse(q.end) + DAY - 1 : Infinity }));
+  const meds = spans.filter((q) => q.kind === 'med').slice(0, 4);
   const band = [...data].reverse().find((p) => p.lo != null || p.hi != null);
   const wrap = h('div', { class: 'chart' });
   const tip = h('div', { class: 'tip', hidden: true });
@@ -73,10 +77,12 @@ export function lineChart(host, { pts, unit, height = 220 }) {
       marker(p, x, y, { class: (p.status === 'high' || p.status === 'low' ? 'mk mk-out' : 'mk') + ' mk-active' }),
     );
     const st = statusLabel(p.status);
+    const during = spans.filter((q) => q.t0 <= p.t && p.t <= q.t1);
     tip.replaceChildren(
       h('div', { class: 'tip-value' }, `${p.qualifier ?? ''}${p.display ?? fmtNum(p.v)} ${unit}`, st ? h('span', { class: `tip-status st-${p.status}` }, ' · ', st) : null),
       h('div', { class: 'tip-meta' }, fmtDate(p.o.date)),
       ...(p.lab ? [h('div', { class: 'tip-meta' }, p.lab)] : []),
+      ...during.map((q) => h('div', { class: `tip-meta tip-${q.kind}` }, q.kind === 'med' ? 'Taking: ' : 'During: ', q.label)),
     );
     tip.hidden = false;
     const w = tip.offsetWidth;
@@ -87,7 +93,7 @@ export function lineChart(host, { pts, unit, height = 220 }) {
   function draw() {
     const W = Math.max(260, wrap.clientWidth);
     const H = height;
-    const M = { l: 44, r: 16, t: 16, b: 28 };
+    const M = { l: 44, r: 16, t: 16 + meds.length * 8, b: 28 };
     const vals = data.map((p) => p.v);
     if (band?.lo != null) vals.push(band.lo);
     if (band?.hi != null) vals.push(band.hi);
@@ -98,6 +104,8 @@ export function lineChart(host, { pts, unit, height = 220 }) {
     const yt = niceTicks(min - pad >= 0 || min < 0 ? min - pad : 0, max + pad);
     let t0 = data[0].t;
     let t1 = data[data.length - 1].t;
+    // Show a medicine started after the last result, up to today.
+    for (const q of meds) if (q.t0 > t1 && q.t0 <= Date.now()) t1 = Math.min(Math.max(t1, q.t1 === Infinity ? Date.now() : q.t1), Date.now());
     if (t1 - t0 < 60 * DAY) { t0 -= 45 * DAY; t1 += 45 * DAY; }
     const tp = (t1 - t0) * 0.04;
     t0 -= tp; t1 += tp;
@@ -112,6 +120,16 @@ export function lineChart(host, { pts, unit, height = 220 }) {
       const bot = band.lo != null ? y(band.lo) : H - M.b;
       svg.append(s('rect', { x: M.l, y: top, width: W - M.l - M.r, height: Math.max(0, bot - top), class: 'band' }));
     }
+    const clip = (q) => [Math.max(x(Math.max(q.t0, t0)), M.l), Math.min(x(Math.min(q.t1, t1)), W - M.r)];
+    for (const q of spans.filter((q) => q.kind === 'ill')) {
+      const [a, b] = clip(q);
+      if (b > a - 2) svg.append(s('rect', { x: a, y: M.t, width: Math.max(3, b - a), height: H - M.t - M.b, class: 'period-ill' }, s('title', null, q.label)));
+    }
+    meds.forEach((q, i) => {
+      const [a, b] = clip(q);
+      if (b <= a) return;
+      svg.append(s('rect', { x: a, y: 6 + i * 8, width: b - a, height: 5, rx: 2.5, class: 'period-med' }, s('title', null, q.label)));
+    });
     for (const v of yt.ticks) {
       svg.append(
         s('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: v === yt.lo ? 'axis' : 'grid' }),

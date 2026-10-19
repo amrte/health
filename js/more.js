@@ -5,6 +5,9 @@ import { pageHead } from './ui.js';
 
 const ITEMS = [
   ['#/search', 'Search', 'Tests, findings, vaccines, DNA, sections'],
+  ['#/timeline', 'Timeline', 'Check-ups, illnesses, medicines, vaccinations by date'],
+  ['#/meds', 'Medicines & allergies', 'What you take and what you react to'],
+  ['#/reminders', 'Reminders & screening', 'Retests and Finnish/German screening programmes'],
   ['#/heart', 'Heart', 'ECG, long-term ECG, echocardiogram, cardiology letters'],
   ['#/body', 'Body', 'Weight, waist, body composition (InBody, Tanita)'],
   ['#/teeth', 'Teeth', 'Tooth chart, treatments, bills, X-rays'],

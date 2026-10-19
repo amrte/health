@@ -4,7 +4,7 @@
 import { h, go, toast, uid } from './dom.js';
 import { state, saveReport } from './store.js';
 import { pageHead, valueText } from './ui.js';
-import { findingItem } from './insights.js';
+import { findingItem, findingHref } from './insights.js';
 import { lineChart, sparkline } from './chart.js';
 import { fmtNum, fmtDate, todayIso } from './format.js';
 import { metricRow, reportRow } from './views.js';
@@ -113,7 +113,7 @@ export function viewBody(root) {
   root.append(h('div', { class: 'split' },
     h('div', { class: 'stack' },
       findings.length ? h('section', { class: 'card findings' }, h('h2', null, 'What this means'),
-        findings.map((f) => findingItem(f, { link: `#/test/${encodeURIComponent(f.keys[0])}` }))) : null,
+        findings.map((f) => findingItem(f, { link: findingHref(f) }))) : null,
       weight ? chartCard : null),
     quickEntry()));
   if (weight) lineChart(chartCard, { pts: weight.pts.map((p) => ({ ...p, lab: state.reportById.get(p.o.reportId)?.lab ?? '' })), unit: 'kg', height: 200 });

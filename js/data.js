@@ -3,6 +3,7 @@
 import { h, toast, go } from './dom.js';
 import * as db from './db.js';
 import { state, load, saveProfile } from './store.js';
+import { REGIONS } from './score2.js';
 import { fmtBytes, todayIso } from './format.js';
 import { pageHead } from './ui.js';
 import { demoData, DEMO_PROFILE } from './demo.js';
@@ -32,6 +33,8 @@ async function exportBackup() {
     bp: state.bp,
     genomes: state.genomes,
     dental: state.dental,
+    meds: state.meds,
+    events: state.events,
     profile: state.profile,
     files: await Promise.all(files.map(async (f) => ({ id: f.id, type: f.type, name: f.name, data: await blobToDataUrl(f.blob) }))),
   };
@@ -68,16 +71,16 @@ async function importBackup(file) {
   const settings = data.profile && typeof data.profile === 'object' ? [{ ...data.profile, id: 'profile' }] : [];
   const arr = (x) => (Array.isArray(x) ? x : []);
   await db.write({ put: { reports: data.reports, obs: data.obs, vaccines, files, settings, measures: arr(data.measures), workouts: arr(data.workouts),
-    bp: arr(data.bp), genomes: arr(data.genomes), dental: arr(data.dental) } });
+    bp: arr(data.bp), genomes: arr(data.genomes), dental: arr(data.dental), meds: arr(data.meds), events: arr(data.events) } });
   await load();
   toast('Backup imported');
   go('#/');
 }
 
 async function writeDemo() {
-  const { reports, obs, vaccines, measures, workouts, bp, genomes, dental, files } = demoData();
+  const { reports, obs, vaccines, measures, workouts, bp, genomes, dental, meds, events, files } = demoData();
   const settings = state.profile.sex || state.profile.birthYear ? [] : [{ id: 'profile', ...DEMO_PROFILE }];
-  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts, bp, genomes, dental, files } });
+  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts, bp, genomes, dental, meds, events, files } });
   await load();
 }
 
@@ -106,6 +109,8 @@ async function removeDemo() {
     bp: state.bp.filter((r) => r.source === 'demo').map((r) => r.id),
     genomes: state.genomes.filter((g) => g.demo).map((g) => g.id),
     dental: state.dental.filter((v) => v.demo).map((v) => v.id),
+    meds: state.meds.filter((m) => m.demo).map((m) => m.id),
+    events: state.events.filter((e) => e.demo).map((e) => e.id),
     files: state.dental.filter((v) => v.demo).flatMap((v) => (v.files ?? []).map((f) => f.id)),
   } });
   await load();
@@ -122,11 +127,12 @@ async function deleteAll() {
 }
 
 function profileCard() {
-  const p = { sex: state.profile.sex ?? '', birthYear: state.profile.birthYear ?? '', height: state.profile.height ?? '' };
+  const p = { sex: state.profile.sex ?? '', birthYear: state.profile.birthYear ?? '', height: state.profile.height ?? '', smoker: state.profile.smoker ?? '',
+    riskRegion: state.profile.riskRegion ?? 'moderate', highRiskCondition: !!state.profile.highRiskCondition };
   const thisYear = new Date().getFullYear();
   return h('section', { class: 'card form' },
     h('h2', null, 'Profile'),
-    h('p', { class: 'muted small' }, 'Used only on this device, for guideline limits that differ by sex or age, to calculate eGFR from creatinine and BMI from your weight.'),
+    h('p', { class: 'muted small' }, 'Used only on this device: for guideline limits that differ by sex or age, eGFR, BMI, your heart-risk score and which screening programmes apply.'),
     h('label', null, h('span', null, 'Sex (as used for lab reference values)'),
       h('select', { value: p.sex, onchange: (e) => { p.sex = e.target.value; } },
         h('option', { value: '' }, 'Not set'), h('option', { value: 'female' }, 'Female'), h('option', { value: 'male' }, 'Male'))),
@@ -134,12 +140,19 @@ function profileCard() {
       h('input', { type: 'text', inputmode: 'numeric', value: String(p.birthYear), placeholder: 'e.g. 1985', oninput: (e) => { p.birthYear = e.target.value; } })),
     h('label', null, h('span', null, 'Height (cm)'),
       h('input', { type: 'text', inputmode: 'decimal', value: String(p.height ?? ''), placeholder: 'e.g. 178', oninput: (e) => { p.height = e.target.value; } })),
+    h('label', null, h('span', null, 'Do you smoke?'),
+      h('select', { value: p.smoker, onchange: (e) => { p.smoker = e.target.value; } },
+        h('option', { value: '' }, 'Not set'), h('option', { value: 'no' }, 'No (never, or stopped)'), h('option', { value: 'yes' }, 'Yes, currently'))),
+    h('label', null, h('span', null, 'Heart risk region (for SCORE2)'),
+      h('select', { value: p.riskRegion, onchange: (e) => { p.riskRegion = e.target.value; } }, REGIONS.map(([k, n]) => h('option', { value: k }, n)))),
+    h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: p.highRiskCondition, onchange: (e) => { p.highRiskCondition = e.target.checked; } }),
+      'I have heart or vascular disease (e.g. heart attack, stroke), diabetes, chronic kidney disease or familial hypercholesterolaemia'),
     h('div', null, h('button', { class: 'btn primary', type: 'button', onclick: async () => {
       const y = Number(p.birthYear);
       if (p.birthYear && !(y > 1900 && y <= thisYear)) { toast('Enter a 4-digit birth year'); return; }
       const ht = Number(String(p.height).replace(',', '.'));
       if (p.height && !(ht >= 100 && ht <= 250)) { toast('Enter your height in cm, e.g. 178'); return; }
-      await saveProfile({ ...state.profile, sex: p.sex, birthYear: p.birthYear ? y : null, height: p.height ? ht : null });
+      await saveProfile({ ...state.profile, sex: p.sex, birthYear: p.birthYear ? y : null, height: p.height ? ht : null, smoker: p.smoker, riskRegion: p.riskRegion, highRiskCondition: p.highRiskCondition });
       toast('Profile saved');
     } }, 'Save profile')));
 }
@@ -182,10 +195,10 @@ export async function viewData(root) {
       h('li', null, 'Tap the Share button, then “Add to Home Screen”.'),
       h('li', null, 'Open the app from the Home Screen icon from now on. It works offline, and Safari doesn’t clear its data after a week of not using it.'))));
 
-  const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo') || state.dental.some((v) => v.demo);
+  const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo') || state.dental.some((v) => v.demo) || state.meds.some((m) => m.demo) || state.events.some((e) => e.demo);
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Demo data'),
-    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests, five dental visits, heart examinations and body composition measurements. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
+    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests, five dental visits, heart examinations, body composition measurements, medicines, an allergy and a few illnesses in the diary. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
     h('div', { class: 'btn-row' },
       hasDemo
         ? h('button', { class: 'btn', type: 'button', onclick: async () => { await removeDemo(); go('#/data'); } }, 'Remove demo data')

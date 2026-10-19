@@ -174,6 +174,47 @@ works offline.
 - Values above the device's range where more is better (muscle, lean mass,
   phase angle) are not flagged.
 
+**Medicines and allergies**
+- List of medicines, supplements and allergies with dose, schedule, reason
+  and start/stop dates. Claude reads packages, prescriptions (Omakanta,
+  e-Rezept) and allergy cards; medicines in doctor letters can be added with
+  one tap.
+- Test pages show the medicines that affect them (statins → LDL, iron →
+  ferritin, vitamin D, B12, thyroid hormone, metformin, folic acid) as bars on
+  the chart.
+- Checks: a medicine that matches an allergy (incl. penicillins and NSAIDs as
+  groups), and statins, clopidogrel and warfarin against your DNA (CPIC).
+- Medicines and allergies can be included in the summary for Claude.
+
+**Heart-risk score (SCORE2)**
+- 10-year risk of heart attack or stroke for ages 40–69 (SCORE2, ESC 2021),
+  from age, sex, smoking, blood pressure (office readings, else home average)
+  and total/HDL cholesterol. Coefficients as published (Eur Heart J
+  2022;43:241); the unit tests reproduce the paper's worked examples.
+- Risk region in the profile: Finland and Germany are "moderate" in SCORE2.
+- Shows the ESC/EAS 2025 risk category and the LDL goal that follows from
+  it, plus the ESC 2021 age-specific category.
+- Not calculated with diabetes (HbA1c ≥ 48 mmol/mol), a marked condition
+  (heart or vascular disease, kidney disease, familial
+  hypercholesterolaemia), under 40 or from 70 (SCORE2-OP isn't implemented).
+
+**Timeline and illness diary**
+- Lab results, heart and body records, dental visits, vaccinations, medicines
+  started and stopped, screenings and diary entries (illnesses, injuries,
+  surgeries, hospital stays, travel, life events) in one list by year.
+- Illnesses are shaded on every test chart, so a CRP spike during a cold is
+  easy to spot.
+
+**Reminders and screening**
+- Reminders for retests, from any test page or by hand. A reminder for a test
+  clears itself when a newer result arrives.
+- Retests suggested by guideline rules: TSH, free T4 and TPO antibodies after
+  2–3 months (ETA), eGFR after 3 months (KDIGO).
+- Screening programmes by age and sex, Finland (bowel, breast, cervical;
+  invitation by letter) and Germany (Check-up 35, hepatitis B/C, skin, bowel,
+  prostate, aortic aneurysm, breast, cervical, lung for heavy smokers), with
+  "mark done" and the next due date. Due items appear on the overview.
+
 **Search**
 - Searches everything:
   - tests, including their names in English, German, Finnish, Ukrainian and
@@ -291,6 +332,10 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/bp.js`, `js/bp-eval.js` | Blood pressure entry, import, chart, ESC/ESH evaluation |
 | `js/genome.js`, `js/dna-variants.js`, `js/dna.js`, `js/dna-eval.js` | Raw DNA reader, curated variants, DNA screen, DNA + lab findings |
 | `js/body.js` | Body page: weight, waist, body composition, quick entry |
+| `js/meds.js`, `js/meds-data.js` | Medicines and allergies; drug groups, allergy and DNA checks |
+| `js/score2.js` | SCORE2 risk model, risk categories, LDL goal |
+| `js/timeline.js` | Timeline and illness diary |
+| `js/reminders.js`, `js/screening.js` | Reminders, suggested retests, Finnish and German screening |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
 The title font is a 5 KB subset of Marck Script (SIL Open Font License),
@@ -302,7 +347,7 @@ results saved earlier.
 
 ## Planned next
 
-- A timeline of check-ups, vaccinations, illnesses and medications, and a
-  printable summary for doctor visits.
+- A printable one-page summary for doctor visits.
+- SCORE2-OP (age 70+) once its coefficients are checked against the paper.
 
 This app doesn't give medical advice. Reference ranges come from your labs.
