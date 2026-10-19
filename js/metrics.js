@@ -45,12 +45,12 @@ const DEFS = [
     unitless: (v) => (v < 1.5 ? v * 100 : v),
     aliases: ['hct', 'hkt', 'hkr', 'ht', 'hematocrit', 'haematocrit', 'hämatokrit', 'hematokriitti', 'гематокрит'] },
   { key: 'mcv', cat: 'cbc', name: 'MCV (mean red cell volume)', unit: 'fL',
-    aliases: ['mcv', 'mean corpuscular volume', 'mittleres zellvolumen', 'mittleres korpuskuläres volumen', 'середній об єм еритроцита', 'середній об єм еритроцитів', 'средний объем эритроцита', 'средний объем эритроцитов'] },
+    aliases: ['punasolujen keskitilavuus', 'punasolujen keskikoko', 'mcv', 'mean corpuscular volume', 'mittleres zellvolumen', 'mittleres korpuskuläres volumen', 'середній об єм еритроцита', 'середній об єм еритроцитів', 'средний объем эритроцита', 'средний объем эритроцитов'] },
   { key: 'mch', cat: 'cbc', name: 'MCH (mean red cell hemoglobin)', unit: 'pg', alt: { fmol: 16.114, 'pg/ery': 1, 'pg/zelle': 1, 'pg/cell': 1 },
-    aliases: ['mch', 'hbe', 'mean corpuscular hemoglobin', 'mittlerer hb gehalt', 'середній вміст гемоглобіну', 'средний уровень гемоглобина', 'среднее содержание гемоглобина'],
+    aliases: ['punasolujen keskimääräinen hemoglobiinimäärä', 'punasolujen hemoglobiinimäärä', 'mch', 'hbe', 'mean corpuscular hemoglobin', 'mittlerer hb gehalt', 'середній вміст гемоглобіну', 'средний уровень гемоглобина', 'среднее содержание гемоглобина'],
     not: ['mchc', 'konz', 'conc', 'концентр'] },
   { key: 'mchc', cat: 'cbc', name: 'MCHC', unit: 'g/L', alt: { 'g/dl': 10, 'mmol/l': 16.114 },
-    aliases: ['mchc', 'mean corpuscular hemoglobin concentration', 'mittlere hb konzentration', 'середня концентрація гемоглобіну', 'средняя концентрация гемоглобина'] },
+    aliases: ['punasolujen keskimääräinen hemoglobiinipitoisuus', 'punasolujen hemoglobiinipitoisuus', 'mchc', 'mean corpuscular hemoglobin concentration', 'mittlere hb konzentration', 'середня концентрація гемоглобіну', 'средняя концентрация гемоглобина'] },
   { key: 'rdw', cat: 'cbc', name: 'RDW', unit: '%',
     aliases: ['rdw', 'rdw cv', 'ery verteilungsbreite', 'erythrozytenverteilungsbreite', 'erythrozyten vert', 'ery vert', 'erythrozytenverteilung', 'red cell distribution width', 'ширина розподілу еритроцитів', 'ширина распределения эритроцитов'],
     not: ['sd'] },
@@ -95,12 +95,12 @@ const DEFS = [
   // Lipids
   { key: 'chol', cat: 'lipids', name: 'Total cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
     aliases: ['cholesterol', 'total cholesterol', 'cholesterin', 'gesamtcholesterin', 'cholesterin gesamt', 'kolesteroli', 'kol', 'chol', 'tc', 'холестерин', 'холестерин загальний', 'загальний холестерин', 'общий холестерин', 'холестерин общий'],
-    not: ['remnant', 'rest', 'ldl', 'hdl', 'лпнщ', 'лпвщ', 'лпднщ', 'лпнп', 'лпвп', 'лпонп', 'non', 'nicht', 'низьк', 'висок', 'низк', 'высок', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош', 'index', 'індекс', 'индекс', 'не лп'] },
+    not: ['density', 'remnant', 'rest', 'ldl', 'hdl', 'лпнщ', 'лпвщ', 'лпднщ', 'лпнп', 'лпвп', 'лпонп', 'non', 'nicht', 'низьк', 'висок', 'низк', 'высок', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош', 'index', 'індекс', 'индекс', 'не лп'] },
   { key: 'ldl', cat: 'lipids', name: 'LDL cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
-    aliases: ['ldl', 'ldl c', 'ldl cholesterol', 'ldl cholesterin', 'kol ldl', 'ldl kolesteroli', 'лпнщ', 'лпнп', 'холестерин лпнщ', 'холестерин лпнп', 'низької щільності', 'низкой плотности'],
+    aliases: ['low density lipoprotein', 'kolesteroli low density lipoprotein', 'ldl kolesteroli', 'ldl', 'ldl c', 'ldl cholesterol', 'ldl cholesterin', 'kol ldl', 'ldl kolesteroli', 'лпнщ', 'лпнп', 'холестерин лпнщ', 'холестерин лпнп', 'низької щільності', 'низкой плотности'],
     not: ['vldl', 'лпднщ', 'лпонп', 'дуже', 'очень', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош'] },
   { key: 'hdl', cat: 'lipids', name: 'HDL cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
-    aliases: ['hdl', 'hdl c', 'hdl cholesterol', 'hdl cholesterin', 'kol hdl', 'hdl kolesteroli', 'лпвщ', 'лпвп', 'холестерин лпвщ', 'холестерин лпвп', 'високої щільності', 'высокой плотности'],
+    aliases: ['high density lipoprotein', 'kolesteroli high density lipoprotein', 'hdl', 'hdl c', 'hdl cholesterol', 'hdl cholesterin', 'kol hdl', 'hdl kolesteroli', 'лпвщ', 'лпвп', 'холестерин лпвщ', 'холестерин лпвп', 'високої щільності', 'высокой плотности'],
     not: ['non', 'nicht', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош', 'не лп'] },
   { key: 'nonhdl', cat: 'lipids', name: 'Non-HDL cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
     aliases: ['non hdl', 'non hdl c', 'non hdl cholesterol', 'non hdl cholesterin', 'nicht hdl cholesterin', 'kol non hdl', 'холестерин не лпвщ', 'не лпвщ', 'холестерин не лпвп'] },
@@ -118,7 +118,7 @@ const DEFS = [
     aliases: ['creatinine', 'kreatinin', 'kreatiniini', 'krea', 'crea', 'creat', 'креатинін', 'креатинин'],
     not: ['gfr', 'clear', 'кліренс', 'клиренс', 'скф', 'шкф', ...URINE, 'ratio', 'kinase', 'kinaasi', 'кіназ', 'киназ'] },
   { key: 'egfr', cat: 'kidney', name: 'eGFR', unit: 'mL/min/1.73m²',
-    aliases: ['egfr', 'gfr', 'gfre', 'ckd epi', 'egfr ckd epi', 'gfr ckd epi', 'gfr mdrd', 'skf', 'шкф', 'скф', 'швидкість клубочкової фільтрації', 'скорость клубочковой фильтрации'] },
+    aliases: ['glomerulussuodosnopeus', 'glomerulussuodatusnopeus', 'arvioitu glomerulussuodosnopeus', 'glomerular filtration rate', 'egfr', 'gfr', 'gfre', 'ckd epi', 'egfr ckd epi', 'gfr ckd epi', 'gfr mdrd', 'skf', 'шкф', 'скф', 'швидкість клубочкової фільтрації', 'скорость клубочковой фильтрации'] },
   { key: 'urea', cat: 'kidney', name: 'Urea', unit: 'mmol/L', alt: { 'mg/dl': 0.1665 },
     aliases: ['urea', 'harnstoff', 'karbamidi', 'сечовина', 'мочевина'], not: ['nitrogen', 'stickstoff', 'bun'] },
   { key: 'bun', cat: 'kidney', name: 'BUN (urea nitrogen)', unit: 'mg/dL',
@@ -130,11 +130,11 @@ const DEFS = [
 
   // Liver & pancreas
   { key: 'alt', cat: 'liver', name: 'ALT', unit: 'U/L', alt: { 'ukat/l': 60 },
-    aliases: ['alt', 'alat', 'gpt', 'alt gpt', 'alat gpt', 'gpt alt', 'alanine aminotransferase', 'alanin aminotransferase', 'алт', 'аланінамінотрансфераза', 'аланинаминотрансфераза'] },
+    aliases: ['alaniiniaminotransferaasi', 'alt', 'alat', 'gpt', 'alt gpt', 'alat gpt', 'gpt alt', 'alanine aminotransferase', 'alanin aminotransferase', 'алт', 'аланінамінотрансфераза', 'аланинаминотрансфераза'] },
   { key: 'ast', cat: 'liver', name: 'AST', unit: 'U/L', alt: { 'ukat/l': 60 },
     aliases: ['ast', 'asat', 'got', 'ast got', 'asat got', 'got ast', 'aspartate aminotransferase', 'aspartat aminotransferase', 'аст', 'аспартатамінотрансфераза', 'аспартатаминотрансфераза'] },
   { key: 'ggt', cat: 'liver', name: 'GGT', unit: 'U/L', alt: { 'ukat/l': 60 },
-    aliases: ['ggt', 'gt', 'gamma gt', 'γ gt', 'y gt', 'gamma glutamyltransferase', 'gamma glutamyl transferase', 'ггт', 'гамма гт', 'гамма глутамілтрансфераза', 'гамма глутамилтрансфераза', 'гамма глутамілтранспептидаза', 'гамма глутамилтранспептидаза'] },
+    aliases: ['glutamyylitransferaasi', 'gamma glutamyylitransferaasi', 'ggt', 'gt', 'gamma gt', 'γ gt', 'y gt', 'gamma glutamyltransferase', 'gamma glutamyl transferase', 'ггт', 'гамма гт', 'гамма глутамілтрансфераза', 'гамма глутамилтрансфераза', 'гамма глутамілтранспептидаза', 'гамма глутамилтранспептидаза'] },
   { key: 'alp', cat: 'liver', name: 'Alkaline phosphatase (ALP)', unit: 'U/L', alt: { 'ukat/l': 60 },
     aliases: ['alp', 'ap', 'afos', 'alkaline phosphatase', 'alkalische phosphatase', 'alk phosphatase', 'alkal phosphatase', 'alk phos', 'alkalinen fosfataasi', 'лужна фосфатаза', 'щелочная фосфатаза', 'лф', 'щф'] },
   { key: 'bili', cat: 'liver', name: 'Bilirubin (total)', unit: 'µmol/L', alt: { 'mg/dl': 17.1 },
@@ -386,13 +386,13 @@ for (const [k, label, words] of SEGMENTS) {
 
 // White cell differential: each cell type exists as % and as absolute count.
 const DIFF = [
-  ['neut', 'Neutrophils', ['neutrophils', 'neutrophil', 'neutrophile', 'neutrophile granulozyten', 'neutrofiilit', 'neut', 'neu', 'ne', 'нейтрофіли', 'нейтрофилы'],
+  ['neut', 'Neutrophils', ['neutrofiiliset leukosyytit', 'neutrophils', 'neutrophil', 'neutrophile', 'neutrophile granulozyten', 'neutrofiilit', 'neut', 'neu', 'ne', 'нейтрофіли', 'нейтрофилы'],
     ['паличк', 'палочк', 'сегмент', 'stab', 'segment', 'band', 'lymph']],
-  ['lymph', 'Lymphocytes', ['lymphocytes', 'lymphozyten', 'lymfosyytit', 'lymf', 'lym', 'lymph', 'ly', 'лімфоцити', 'лимфоциты'], ['atyp', 'reakt']],
-  ['mono', 'Monocytes', ['monocytes', 'monozyten', 'monosyytit', 'mono', 'mon', 'mo', 'моноцити', 'моноциты'], []],
-  ['eos', 'Eosinophils', ['eosinophils', 'eosinophile', 'eosinophile granulozyten', 'eosinofiilit', 'eos', 'eo', 'еозинофіли', 'эозинофилы'], []],
+  ['lymph', 'Lymphocytes', ['lymphocytes', 'lymfosyytit osuus', 'lymphozyten', 'lymfosyytit', 'lymf', 'lym', 'lymph', 'ly', 'лімфоцити', 'лимфоциты'], ['atyp', 'reakt']],
+  ['mono', 'Monocytes', ['monos', 'monosyytit osuus', 'monocytes', 'monozyten', 'monosyytit', 'mono', 'mon', 'mo', 'моноцити', 'моноциты'], []],
+  ['eos', 'Eosinophils', ['eosinofiiliset leukosyytit', 'eosinophils', 'eosinophile', 'eosinophile granulozyten', 'eosinofiilit', 'eos', 'eo', 'еозинофіли', 'эозинофилы'], []],
   ['ig', 'Immature granulocytes', ['immature granulocytes', 'unreife granulozyten', 'ig', 'kypsymättömät granulosyytit', 'незрілі гранулоцити', 'незрелые гранулоциты'], []],
-  ['baso', 'Basophils', ['basophils', 'basophile', 'basophile granulozyten', 'basofiilit', 'baso', 'bas', 'ba', 'базофіли', 'базофилы'], []],
+  ['baso', 'Basophils', ['basofiiliset leukosyytit', 'basophils', 'basophile', 'basophile granulozyten', 'basofiilit', 'baso', 'bas', 'ba', 'базофіли', 'базофилы'], []],
 ];
 for (const [base, name, aliases, not] of DIFF) {
   DEFS.push({ key: base + '_pct', cat: 'diff', name: name + ' %', unit: '%', aliases, not, pair: base });

@@ -155,7 +155,8 @@ Rules:
 - "lab": the laboratory or practice that did the tests — not the doctor who validated or signed the report.${type === 'lab' ? `
 - Urine, stool and other non-blood results: put the specimen in "name", e.g. "Leukozyten (Urin)", and use metric null. A heading such as "Urinstatus" applies to every row under it, also on the following pages.
 - If a test is given by several formulas (e.g. eGFR by MDRD, Mayo and CKD-EPI), use the metric key only for CKD-EPI and null for the others. If a result is printed in two units (e.g. HbA1c in % and mmol/mol), give both rows with the same metric key.
-- If no sample date is printed (e.g. "Abnahmedatum: -"), use the date the lab received the sample.` : ''}
+- If no sample date is printed (e.g. "Abnahmedatum: -"), use the date the lab received the sample.
+- Screenshots from a lab app: they often overlap, so give each result only once. A name cut off with "…" is replaced by the short code shown with it (e.g. "S -Kol-HDL"). A range drawn as a coloured bar: the numbers under the bar are the limits; with only one number, the normal (green) side gives the direction: "< 5" when normal is below it, "> 1" when above.` : ''}
 - Leave out personal data (name, address, insurance number). Don't add anything that is not in the document.
 - "metric": the best matching key from this list, or null if none fits:
 ${list}`;

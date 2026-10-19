@@ -286,3 +286,15 @@ test('Ukrainian reports: units in two languages, platelet indices, described ran
   assert.equal(bloodGroup(obs), 'O (I) Rh−');
   assert.equal(bloodGroup([{ name: 'Blutgruppe', valueRaw: 'A', date: '2020-01-01' }, { name: 'Rhesusfaktor', valueRaw: 'Rh-positiv', date: '2020-01-01' }]), 'A Rh+');
 });
+
+test('Finnish lab app: codes, Finnish names and one-number bars', async () => {
+  const { matchMetric } = await import('../js/metrics.js');
+  const { buildPrompt } = await import('../js/parse.js');
+  const cases = [['Pt-GFRe', 'ml/min/1,73m2', 'egfr'], ['Glomerulussuodosnopeus', 'ml/min/1,73m2', 'egfr'], ['Kolesteroli, high density lipoprotein', 'mmol/l', 'hdl'],
+    ['Kolesteroli, low density lipoprotein', 'mmol/l', 'ldl'], ['Kolesteroli', 'mmol/l', 'chol'], ['S -Kol-HDL', 'mmol/l', 'hdl'], ['Alaniiniaminotransferaasi', 'U/l', 'alt'],
+    ['Glutamyylitransferaasi (S -GT)', 'U/l', 'ggt'], ['Punasolujen keskitilavuus', 'fl', 'mcv'], ['Punasolujen keskimääräinen hemoglobiinimäärä', 'pg', 'mch'],
+    ['Punasolujen keskimääräinen hemoglobiinipitoisuus', 'g/l', 'mchc'], ['Basofiiliset leukosyytit', 'E9/L', 'baso_abs'], ['Basofiilit osuus', '%', 'baso_pct'],
+    ['B -Monos%', '%', 'mono_pct'], ['B -Monos', 'E9/L', 'mono_abs'], ['B -Leuk', 'E9/L', 'wbc'], ['E -MCV', 'fl', 'mcv']];
+  for (const [n, u, k] of cases) assert.equal(matchMetric(n, u, 1), k, n);
+  assert.match(buildPrompt('lab'), /with only one number, the normal \(green\) side gives the direction/);
+});
