@@ -4,7 +4,7 @@ import { h } from './dom.js';
 import { load } from './store.js';
 import { viewOverview, viewMetric, viewReports, viewReport } from './views.js';
 import { viewEditor, editorDirty, clearDirty } from './editor.js';
-import { viewData } from './data.js';
+import { viewData, seedDemoOnce } from './data.js';
 import { viewDiscuss } from './discuss.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
@@ -55,6 +55,7 @@ window.addEventListener('beforeunload', (e) => { if (editorDirty() || vaccineEdi
 
 try {
   await load();
+  if (document.documentElement.dataset.demoSeed) await seedDemoOnce();
 } catch (err) {
   main.replaceChildren(h('p', { class: 'pad warn' }, 'Could not open the on-device database. Private browsing may block it. ' + (err?.message ?? '')));
   throw err;

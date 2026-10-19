@@ -1,4 +1,4 @@
-// Made-up demo data: seven check-ups at a Finnish, a German and a Ukrainian lab,
+// Made-up demo data for a fictional man born in 1980: seven check-ups at a Finnish, a German and a Ukrainian lab,
 // each with its own test names and units, so conversion and matching are visible.
 
 import { getMetric } from './metrics.js';
@@ -25,7 +25,8 @@ const TRUE = {
   crea: [84, 88, 86, 91, 89, 92, 90],
   alt: [28, 35, 31, 52, 38, 33, 29],
   ferritin: [145, 120, 98, 76, 61, 48, 27],
-  tsh: [1.8, 2.1, 1.9, 2.4, 2.2, 2.6, 2.3],
+  tsh: [1.8, 2.1, 1.9, 2.4, 2.2, 2.6, 4.4],
+  ft4: [15, 14, 15, 14, 14, 13, 13],
   vitd: [48, 62, 55, 88, 52, 71, 79],
   crp: [1.2, 0.8, 4.1, 1.0, 0.6, 1.5, 0.9],
   esr: [6, null, null, null, null, null, null],
@@ -39,7 +40,7 @@ const FORMAT = {
     hct: ['B-HKR', '', 2, '0.39–0.50'], mcv: ['E-MCV', 'fl', 0, '82–98'], glucose: ['fP-Gluk', 'mmol/l', 1, '4.0–6.0'],
     hba1c: ['B-GHbA1C', 'mmol/mol', 0, '20–42'], chol: ['fP-Kol', 'mmol/l', 1, '< 5.0'], ldl: ['fP-Kol-LDL', 'mmol/l', 1, '< 3.0'],
     hdl: ['fP-Kol-HDL', 'mmol/l', 2, '> 1.0'], trig: ['fP-Trigly', 'mmol/l', 1, '< 1.7'], crea: ['P-Krea', 'µmol/l', 0, '60–100'],
-    alt: ['P-ALAT', 'U/l', 0, '< 50'], ferritin: ['P-Ferrit', 'µg/l', 0, '30–400'], tsh: ['P-TSH', 'mU/l', 2, '0.5–3.6'],
+    alt: ['P-ALAT', 'U/l', 0, '< 50'], ferritin: ['P-Ferrit', 'µg/l', 0, '30–400'], tsh: ['P-TSH', 'mU/l', 2, '0.5–3.6'], ft4: ['P-T4-V', 'pmol/l', 0, '9–19'],
     vitd: ['fS-D-25', 'nmol/l', 0, '50–125'], crp: ['P-CRP', 'mg/l', 1, '< 3'],
   },
   de: {
@@ -47,7 +48,7 @@ const FORMAT = {
     hct: ['Hämatokrit', '%', 1, '40–52'], mcv: ['MCV', 'fl', 0, '80–99'], glucose: ['Glukose nüchtern', 'mg/dl', 0, '70–100'],
     hba1c: ['HbA1c', '%', 1, '4,0–5,6'], chol: ['Cholesterin gesamt', 'mg/dl', 0, '< 200'], ldl: ['LDL-Cholesterin', 'mg/dl', 0, '< 116'],
     hdl: ['HDL-Cholesterin', 'mg/dl', 0, '> 40'], trig: ['Triglyceride', 'mg/dl', 0, '< 150'], crea: ['Kreatinin', 'mg/dl', 2, '0,70–1,20'],
-    alt: ['GPT (ALT)', 'U/l', 0, '< 50'], ferritin: ['Ferritin', 'ng/ml', 0, '30–400'], tsh: ['TSH basal', 'µIU/ml', 2, '0,27–4,20'],
+    alt: ['GPT (ALT)', 'U/l', 0, '< 50'], ferritin: ['Ferritin', 'ng/ml', 0, '30–400'], tsh: ['TSH basal', 'µIU/ml', 2, '0,27–4,20'], ft4: ['fT4', 'pmol/l', 1, '12,0–22,0'],
     vitd: ['25-OH-Vitamin D', 'ng/ml', 0, '30–100'], crp: ['CRP', 'mg/dl', 2, '< 0,50'], b12: ['Vitamin B12', 'pg/ml', 0, '197–771'],
   },
   ua: {
@@ -55,7 +56,7 @@ const FORMAT = {
     hct: ['Гематокрит', '%', 1, '40–48'], mcv: ['MCV', 'фл', 0, '80–100'], glucose: ['Глюкоза', 'ммоль/л', 1, '3,3–5,5'],
     chol: ['Холестерин загальний', 'ммоль/л', 1, '< 5,2'], ldl: ['Холестерин ЛПНЩ', 'ммоль/л', 1, '< 3,0'],
     hdl: ['Холестерин ЛПВЩ', 'ммоль/л', 2, '> 1,0'], trig: ['Тригліцериди', 'ммоль/л', 2, '< 1,7'], crea: ['Креатинін', 'мкмоль/л', 0, '62–106'],
-    alt: ['АЛТ', 'Од/л', 0, '< 41'], ferritin: ['Феритин', 'нг/мл', 0, '30–400'], tsh: ['ТТГ', 'мкМО/мл', 2, '0,4–4,0'],
+    alt: ['АЛТ', 'Од/л', 0, '< 41'], ferritin: ['Феритин', 'нг/мл', 0, '30–400'], tsh: ['ТТГ', 'мкМО/мл', 2, '0,4–4,0'], ft4: ['Т4 вільний', 'пмоль/л', 1, '12,0–22,0'],
     vitd: ['Вітамін D (25-OH)', 'нг/мл', 0, '30–100'], crp: ['С-реактивний білок', 'мг/л', 1, '< 5'], esr: ['ШОЕ', 'мм/год', 0, '2–15'],
   },
 };
@@ -88,3 +89,5 @@ export function demoData() {
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
   return { reports, obs, vaccines };
 }
+
+export const DEMO_PROFILE = { sex: 'male', birthYear: 1980 };

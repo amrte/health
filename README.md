@@ -82,6 +82,19 @@ works offline.
 - Demo data: seven made-up check-ups from Finnish, German and Ukrainian labs
   plus a few vaccinations. You can remove it in one go.
 
+## Trying it on a computer
+
+Download [`dist/health-records-demo.html`](dist/health-records-demo.html) and
+open it in Chrome, Edge or Firefox. It's a single self-contained file. The
+first time it opens, it fills itself with a fictional person: a man born in
+1980 with seven check-ups and a few vaccinations. You can remove the demo data
+on the Data tab. [`dist/health-records.html`](dist/health-records.html) is the
+same app, but starts empty.
+
+Data is stored in the browser for that file, so moving or renaming the file
+starts a fresh, empty app. On iPhone, the Files app only previews HTML
+without running it; use the hosted version described below.
+
 ## Using it on iPhone
 
 The app is static files (no server code), but it has to be served over HTTPS
@@ -106,6 +119,7 @@ No build step: plain ES modules, HTML and CSS.
 ```sh
 npm install         # only needed for the browser test
 npm run serve       # http://localhost:8080/
+npm run build       # single-file builds in dist/
 npm test            # unit tests + headless Chromium end-to-end test
 npm run icons       # re-render PNG icons from icons/icon.svg
 ```

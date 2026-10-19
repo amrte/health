@@ -141,7 +141,10 @@ export function evaluate(byMetric, profile = {}, now = Date.now()) {
     const f = pattern(ctx);
     if (f) out.push({ kind: 'pattern', sources: [], ...f });
   }
-  return out.sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level));
+  // Most urgent first; within a level, cross-test patterns and guideline rules
+  // before plain lab-range notes.
+  const KINDS = ['pattern', 'guideline', 'trend', 'range', 'age'];
+  return out.sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level) || KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind));
 }
 
 // Values shown as e.g. "4.2 mmol/L (162 mg/dL)" in rule texts.

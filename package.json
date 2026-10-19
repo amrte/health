@@ -5,11 +5,13 @@
   "description": "Private, on-device tracker for lab results and vaccinations",
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
     "serve": "node scripts/serve.mjs",
     "icons": "node scripts/icons.mjs",
-    "test": "node --test tests/unit.test.js tests/evaluate.test.js && node tests/e2e.mjs"
+    "test": "node --test tests/unit.test.js tests/evaluate.test.js && node tests/e2e.mjs && node tests/dist.mjs"
   },
   "devDependencies": {
+    "esbuild": "0.25.10",
     "playwright-core": "1.56.1"
   }
 }
