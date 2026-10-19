@@ -1,7 +1,439 @@
-// Guideline knowledge per test: explanations, guideline limits, rules and sources.
-// Filled in once every number has been checked against its source.
+// Guideline knowledge per test: plain explanation, guideline limits, rules and sources.
+//
+// Every number here was checked against its source when this file was written
+// (see REVIEWED). Where a source wasn't confirmed, no rule was written — the app
+// then falls back to the lab's own reference range. Values are in the catalogue's
+// canonical units (mostly SI); conventional units are given in the texts.
+//
+// A rule is (latestPoint, ctx) → finding | null, where a finding is
+// { level: 'alert' | 'attention' | 'info' | 'good', title, text, sources: [ids] }.
+
+import { fmtNum, fmtDate } from './format.js';
+import { normUnit } from './units.js';
 
 export const REVIEWED = '2026-10-19';
-export const SOURCES = {};
-export const KB = {};
-export const PATTERNS = [];
+
+export const SOURCES = {
+  esc2019: { short: 'ESC/EAS 2019', org: 'European Society of Cardiology / European Atherosclerosis Society', year: 2019,
+    title: 'Guidelines for the management of dyslipidaemias (Eur Heart J 2020;41:111–188)', url: 'https://academic.oup.com/eurheartj/article/41/1/111/5556353' },
+  esc2025: { short: 'ESC/EAS 2025', org: 'ESC / EAS', year: 2025,
+    title: 'Focused update of the 2019 dyslipidaemia guidelines (Eur Heart J 2025;46:4359–4378)', url: 'https://academic.oup.com/eurheartj/article/46/42/4359/8234482' },
+  eas2022: { short: 'EAS 2022', org: 'European Atherosclerosis Society', year: 2022,
+    title: 'Lipoprotein(a) consensus statement (Eur Heart J 2022;43:3925–3946)', url: 'https://academic.oup.com/eurheartj/article/43/39/3925/6670882' },
+  ada2026: { short: 'ADA 2026', org: 'American Diabetes Association', year: 2026,
+    title: 'Standards of Care in Diabetes — 2. Diagnosis and Classification (Diabetes Care 2026;49 Suppl 1)', url: 'https://diabetesjournals.org/care/article/49/Supplement_1/S27/163926/2-Diagnosis-and-Classification-of-Diabetes' },
+  who2006: { short: 'WHO 2006', org: 'World Health Organization / IDF', year: 2006,
+    title: 'Definition and diagnosis of diabetes mellitus and intermediate hyperglycaemia', url: 'https://www.who.int/publications/i/item/definition-and-diagnosis-of-diabetes-mellitus-and-intermediate-hyperglycaemia' },
+  who2011: { short: 'WHO 2011', org: 'World Health Organization', year: 2011,
+    title: 'Use of glycated haemoglobin (HbA1c) in the diagnosis of diabetes mellitus', url: 'https://iris.who.int/server/api/core/bitstreams/db9b9d3d-f95e-4797-9d2b-c78dcef0133f/content' },
+  who2020: { short: 'WHO 2020', org: 'World Health Organization', year: 2020,
+    title: 'Guideline on use of ferritin concentrations to assess iron status', url: 'https://www.who.int/publications/i/item/9789240000124' },
+  who2024: { short: 'WHO 2024', org: 'World Health Organization', year: 2024,
+    title: 'Guideline on haemoglobin cutoffs to define anaemia', url: 'https://www.who.int/publications/i/item/9789240088542' },
+  aga2020: { short: 'AGA 2020', org: 'American Gastroenterological Association', year: 2020,
+    title: 'Gastrointestinal evaluation of iron deficiency anemia (Gastroenterology 2020;159:1085–1094)', url: 'https://gastro.org/clinical-guidance/gastrointestinal-evaluation-of-iron-deficiency-anemia/' },
+  kdigo2024: { short: 'KDIGO 2024', org: 'Kidney Disease: Improving Global Outcomes', year: 2024,
+    title: 'Clinical Practice Guideline for the Evaluation and Management of CKD', url: 'https://kdigo.org/wp-content/uploads/2024/03/KDIGO-2024-CKD-Guideline.pdf' },
+  ckdepi2021: { short: 'CKD-EPI 2021', org: 'Inker et al., N Engl J Med', year: 2021,
+    title: 'New creatinine- and cystatin C–based equations to estimate GFR without race', url: 'https://www.niddk.nih.gov/research-funding/research-programs/kidney-clinical-research-epidemiology/laboratory/glomerular-filtration-rate-equations/adults' },
+  iom2011: { short: 'IOM 2011', org: 'Institute of Medicine (National Academies)', year: 2011,
+    title: 'Dietary Reference Intakes for Calcium and Vitamin D', url: 'https://www.nationalacademies.org/read/13050/chapter/8' },
+  es2024: { short: 'Endocrine Society 2024', org: 'Endocrine Society', year: 2024,
+    title: 'Vitamin D for the prevention of disease (J Clin Endocrinol Metab 2024;109:1907)', url: 'https://academic.oup.com/jcem/article/109/8/1907/7685305' },
+  aha2003: { short: 'AHA/CDC 2003', org: 'American Heart Association / CDC', year: 2003,
+    title: 'Markers of inflammation and cardiovascular disease (Circulation 2003;107:499–511)', url: 'https://pubmed.ncbi.nlm.nih.gov/12551878/' },
+  acg2017: { short: 'ACG 2017', org: 'American College of Gastroenterology', year: 2017,
+    title: 'Evaluation of abnormal liver chemistries (Am J Gastroenterol 2017;112:18–35)', url: 'https://pubmed.ncbi.nlm.nih.gov/27995906/' },
+  eta2013: { short: 'ETA 2013', org: 'European Thyroid Association', year: 2013,
+    title: 'Management of subclinical hypothyroidism (Eur Thyroid J 2013;2:215–228)', url: 'https://www.eurothyroid.com/files/download/ETA-Guideline-Management-of-Subclinical-Hypothyroidism.pdf' },
+  eta2015: { short: 'ETA 2015', org: 'European Thyroid Association', year: 2015,
+    title: 'Diagnosis and management of endogenous subclinical hyperthyroidism (Eur Thyroid J 2015;4:149–163)', url: 'https://doi.org/10.1159/000438750' },
+  bsh2014: { short: 'BSH 2014', org: 'British Society for Haematology', year: 2014,
+    title: 'Diagnosis and treatment of cobalamin and folate disorders (Br J Haematol 2014;166:496–513)', url: 'https://b-s-h.org.uk/guidelines/guidelines/diagnosis-of-b12-and-folate-deficiency' },
+  nice239: { short: 'NICE NG239', org: 'National Institute for Health and Care Excellence', year: 2024,
+    title: 'Vitamin B12 deficiency in over 16s: diagnosis and management', url: 'https://www.nice.org.uk/guidance/ng239' },
+};
+
+const ML = (slug, title) => ({ short: 'MedlinePlus', org: 'U.S. National Library of Medicine', year: null, title: `MedlinePlus: ${title}`, url: `https://medlineplus.gov/${slug}` });
+Object.assign(SOURCES, {
+  ml_hb: ML('lab-tests/hemoglobin-test/', 'Hemoglobin test'),
+  ml_ferritin: ML('lab-tests/ferritin-blood-test/', 'Ferritin blood test'),
+  ml_cbc: ML('lab-tests/complete-blood-count-cbc/', 'Complete blood count'),
+  ml_chol: ML('lab-tests/cholesterol-levels/', 'Cholesterol levels'),
+  ml_trig: ML('lab-tests/triglycerides-test/', 'Triglycerides test'),
+  ml_a1c: ML('lab-tests/hemoglobin-a1c-hba1c-test/', 'Hemoglobin A1C test'),
+  ml_glucose: ML('lab-tests/blood-glucose-test/', 'Blood glucose test'),
+  ml_crea: ML('lab-tests/creatinine-test/', 'Creatinine test'),
+  ml_gfr: ML('lab-tests/glomerular-filtration-rate-gfr-test/', 'GFR test'),
+  ml_alt: ML('lab-tests/alt-blood-test/', 'ALT blood test'),
+  ml_tsh: ML('lab-tests/tsh-thyroid-stimulating-hormone-test/', 'TSH test'),
+  ml_t4: ML('lab-tests/thyroxine-t4-test/', 'Thyroxine (T4) test'),
+  ml_crp: ML('lab-tests/c-reactive-protein-crp-test/', 'C-reactive protein test'),
+  ml_vitd: ML('lab-tests/vitamin-d-test/', 'Vitamin D test'),
+  ml_b: ML('lab-tests/vitamin-b-test/', 'Vitamin B test'),
+  ml_wbc: ML('lab-tests/white-blood-count-wbc/', 'White blood count'),
+  ml_plt: ML('lab-tests/platelet-tests/', 'Platelet tests'),
+  ml_hct: ML('lab-tests/hematocrit-test/', 'Hematocrit test'),
+  ml_mcv: ML('lab-tests/mcv-mean-corpuscular-volume/', 'MCV'),
+  ml_indices: ML('lab-tests/red-blood-cell-rbc-indices/', 'Red blood cell indices'),
+});
+
+const v = (x, unit) => `${fmtNum(x)} ${unit}`;
+const F = (level, title, text, sources) => ({ level, title, text, sources });
+
+// ---- per-test knowledge ----------------------------------------------------
+
+export const KB = {
+  hb: {
+    about: 'Hemoglobin is the oxygen-carrying protein in red blood cells. It is the main measure for anaemia.',
+    low: 'Anaemia, e.g. from iron, B12 or folate deficiency, blood loss or chronic disease.',
+    high: 'Dehydration, smoking, living at high altitude, lung or heart conditions, or rarely a bone-marrow disorder.',
+    thresholds: [
+      { label: 'Anaemia, men 15–65 y', value: '< 130 g/L (13.0 g/dL)', source: 'who2024' },
+      { label: 'Anaemia, non-pregnant women 15–65 y', value: '< 120 g/L (12.0 g/dL)', source: 'who2024' },
+      { label: 'Moderate / severe anaemia', value: '80–109 / < 80 g/L', source: 'who2024' },
+    ],
+    note: 'WHO adjusts the cut-offs for smoking (−3 to −6 g/L) and altitude above 500 m. No separate WHO cut-off was confirmed for age 65 and over; the app uses the lab range there.',
+    sources: ['ml_hb'],
+    pubmed: 'hemoglobin anaemia diagnosis adults',
+    rules: [(p, c) => {
+      const age = c.age(p);
+      if (!c.sex || age == null || age < 15 || age > 65) return null;
+      const cut = c.sex === 'male' ? 130 : 120;
+      if (p.v >= cut) return F('good', 'Hemoglobin: no anaemia by WHO criteria', `${v(p.v, 'g/L')} is at or above the WHO cut-off of ${cut} g/L for ${c.sex === 'male' ? 'men' : 'non-pregnant women'} aged 15–65.`, ['who2024']);
+      const sev = p.v < 80 ? 'severe' : p.v < 110 ? 'moderate' : 'mild';
+      return F(sev === 'mild' ? 'attention' : 'alert', `Hemoglobin: ${sev} anaemia range (WHO)`,
+        `${v(p.v, 'g/L')} is below the WHO cut-off of ${cut} g/L. WHO grades it as ${sev}. Common causes are iron, B12 or folate deficiency and blood loss — the cause needs to be found.`, ['who2024']);
+    }],
+  },
+
+  ferritin: {
+    about: 'Ferritin reflects the body’s iron stores. It also rises with inflammation, infection and liver disease, so a normal value doesn’t always rule out iron deficiency.',
+    low: 'Low iron stores: blood loss (including menstruation), low intake, poor absorption (e.g. coeliac disease).',
+    high: 'Inflammation or infection, liver disease, alcohol, metabolic syndrome, or iron overload (e.g. haemochromatosis).',
+    thresholds: [
+      { label: 'Iron deficiency, healthy adults', value: '< 15 µg/L', source: 'who2020' },
+      { label: 'Iron deficiency with infection or inflammation', value: '< 70 µg/L', source: 'who2020' },
+      { label: 'Iron deficiency in people with anaemia', value: '< 45 µg/L', source: 'aga2020' },
+      { label: 'Risk of iron overload, menstruating women', value: '> 150 µg/L', source: 'who2020' },
+      { label: 'Risk of iron overload, men and other women', value: '> 200 µg/L', source: 'who2020' },
+    ],
+    note: 'WHO recommends measuring an inflammation marker (CRP) together with ferritin.',
+    sources: ['ml_ferritin'],
+    pubmed: 'serum ferritin iron deficiency threshold',
+    rules: [(p, c) => {
+      const crp = c.near('crp', p) ?? c.near('hscrp', p);
+      const inflamed = crp && crp.status === 'high';
+      if (p.v < 15) return F('attention', 'Ferritin: iron deficiency range (WHO)', `${v(p.v, 'µg/L')} is below 15 µg/L, which WHO uses to define iron deficiency in healthy adults.`, ['who2020']);
+      if (inflamed && p.v < 70) return F('attention', 'Ferritin: possible iron deficiency despite inflammation',
+        `CRP was raised (${v(crp.v, 'mg/L')}) at the same time. Inflammation raises ferritin, so WHO uses < 70 µg/L in that case — ${v(p.v, 'µg/L')} is below it.`, ['who2020']);
+      if (!crp && p.v < 70) return F('info', 'Ferritin: no CRP measured with it',
+        'Inflammation can raise ferritin and hide iron deficiency. WHO recommends measuring CRP together with ferritin.', ['who2020']);
+      const over = c.sex === 'male' ? 200 : c.sex === 'female' ? 150 : null;
+      if (over && p.v > over) return F('attention', 'Ferritin above the WHO iron-overload screening level',
+        `${v(p.v, 'µg/L')} is above ${over} µg/L${c.sex === 'female' ? ' (the cut-off for menstruating women; 200 µg/L applies after menopause)' : ''}. Inflammation, liver disease and alcohol raise ferritin too; transferrin saturation helps tell them apart.`, ['who2020']);
+      return null;
+    }],
+  },
+
+  glucose: {
+    about: 'Plasma glucose (blood sugar). Limits below apply to fasting samples (at least 8 hours without food).',
+    high: 'Prediabetes or diabetes, a non-fasting sample, stress, illness, some medicines (e.g. steroids).',
+    low: 'Long fasting, some medicines (e.g. insulin), rarely other conditions.',
+    thresholds: [
+      { label: 'Impaired fasting glucose (ADA)', value: '5.6–6.9 mmol/L (100–125 mg/dL)', source: 'ada2026' },
+      { label: 'Impaired fasting glucose (WHO)', value: '6.1–6.9 mmol/L (110–125 mg/dL)', source: 'who2006' },
+      { label: 'Diabetes range (ADA, WHO)', value: '≥ 7.0 mmol/L (126 mg/dL)', source: 'ada2026' },
+    ],
+    note: 'A diabetes diagnosis needs confirmation: two abnormal results from different tests (e.g. glucose and HbA1c, even from the same blood draw) or the same test on two occasions.',
+    sources: ['ml_glucose'],
+    pubmed: 'fasting plasma glucose diagnosis prediabetes',
+    rules: [(p) => {
+      if (p.v >= 7.0) return F('alert', 'Glucose in the diabetes range (if fasting)', `${v(p.v, 'mmol/L')} is at or above 7.0 mmol/L (126 mg/dL). If the sample was fasting, this is in the diabetes range; ADA requires a second abnormal result to confirm.`, ['ada2026', 'who2006']);
+      if (p.v >= 6.1) return F('attention', 'Glucose: impaired fasting glucose (if fasting)', `${v(p.v, 'mmol/L')} is in the impaired fasting glucose range by both WHO (6.1–6.9) and ADA (5.6–6.9).`, ['who2006', 'ada2026']);
+      if (p.v >= 5.6) return F('info', 'Glucose: ADA prediabetes range (if fasting)', `${v(p.v, 'mmol/L')} is within ADA’s impaired fasting glucose range (5.6–6.9 mmol/L) but below WHO’s (from 6.1). HbA1c gives a longer-term picture.`, ['ada2026', 'who2006']);
+      return null;
+    }],
+  },
+
+  hba1c: {
+    about: 'HbA1c shows the average blood sugar over the past 2–3 months. No fasting needed. Some conditions affecting red blood cells (anaemia, haemoglobin variants) can distort it.',
+    thresholds: [
+      { label: 'Prediabetes (ADA)', value: '39–47 mmol/mol (5.7–6.4 %)', source: 'ada2026' },
+      { label: 'Diabetes range (ADA, WHO)', value: '≥ 48 mmol/mol (6.5 %)', source: 'who2011' },
+    ],
+    note: 'WHO has no HbA1c category below the diabetes cut-off; the prediabetes range is ADA’s.',
+    sources: ['ml_a1c'],
+    pubmed: 'HbA1c diagnosis diabetes prediabetes',
+    rules: [(p) => {
+      const pct = (p.v + 23.5) / 10.929;
+      if (p.v >= 48) return F('alert', 'HbA1c in the diabetes range', `${v(p.v, 'mmol/mol')} (${pct.toFixed(1)} %) is at or above 48 mmol/mol (6.5 %), the diagnostic cut-off of WHO and ADA. A second abnormal result is needed to confirm.`, ['who2011', 'ada2026']);
+      if (p.v >= 39) return F('attention', 'HbA1c: prediabetes range (ADA)', `${v(p.v, 'mmol/mol')} (${pct.toFixed(1)} %) is within ADA’s prediabetes range of 39–47 mmol/mol (5.7–6.4 %).`, ['ada2026']);
+      return F('good', 'HbA1c below the prediabetes range', `${v(p.v, 'mmol/mol')} (${pct.toFixed(1)} %) is below 39 mmol/mol (5.7 %).`, ['ada2026']);
+    }],
+  },
+
+  ldl: {
+    about: 'LDL cholesterol carries cholesterol into artery walls and is the main target for preventing heart attack and stroke. Which level is “good enough” depends on a person’s overall cardiovascular risk.',
+    high: 'Diet, genetics (familial hypercholesterolaemia), hypothyroidism, kidney or liver conditions, some medicines.',
+    thresholds: [
+      { label: 'Goal at low risk', value: '< 3.0 mmol/L (116 mg/dL)', source: 'esc2019' },
+      { label: 'Goal at moderate risk', value: '< 2.6 mmol/L (100 mg/dL)', source: 'esc2019' },
+      { label: 'Goal at high risk', value: '< 1.8 mmol/L (70 mg/dL) and −50 %', source: 'esc2019' },
+      { label: 'Goal at very high risk', value: '< 1.4 mmol/L (55 mg/dL) and −50 %', source: 'esc2019' },
+      { label: 'High risk on its own', value: '> 4.9 mmol/L (190 mg/dL)', source: 'esc2019' },
+    ],
+    note: 'The 2025 focused update kept these goals. Your risk category comes from age, blood pressure, smoking, diabetes, kidney function and existing disease — a doctor can estimate it.',
+    sources: ['ml_chol', 'esc2025'],
+    pubmed: 'LDL cholesterol target cardiovascular prevention',
+    rules: [(p) => {
+      if (p.v > 4.9) return F('alert', 'LDL cholesterol markedly raised', `${v(p.v, 'mmol/L')} is above 4.9 mmol/L (190 mg/dL). ESC/EAS count this alone as high cardiovascular risk and advise considering familial hypercholesterolaemia.`, ['esc2019']);
+      const goals = [[3.0, 'low'], [2.6, 'moderate'], [1.8, 'high'], [1.4, 'very high']].filter(([g]) => p.v < g).map(([, r]) => r);
+      if (!goals.length) return F('info', 'LDL above all ESC/EAS goals', `${v(p.v, 'mmol/L')} is above even the goal for people at low cardiovascular risk (< 3.0 mmol/L). Whether that calls for action depends on your overall risk.`, ['esc2019']);
+      return F('good', 'LDL within an ESC/EAS goal', `${v(p.v, 'mmol/L')} meets the goal for people at ${goals.join(', ')} risk.`, ['esc2019']);
+    }],
+  },
+
+  nonhdl_calc: {
+    about: 'Non-HDL cholesterol is total cholesterol minus HDL: all cholesterol in particles that can cause atherosclerosis. Calculated here from your total and HDL results. ESC/EAS use it as a secondary goal, especially when triglycerides are high.',
+    thresholds: [
+      { label: 'Secondary goal at high risk', value: '< 2.6 mmol/L (100 mg/dL)', source: 'esc2019' },
+      { label: 'Secondary goal at very high risk', value: '< 2.2 mmol/L (85 mg/dL)', source: 'esc2019' },
+    ],
+    sources: ['ml_chol'],
+    pubmed: 'non-HDL cholesterol cardiovascular risk',
+  },
+
+  chol: {
+    about: 'Total cholesterol is the sum of LDL, HDL and other cholesterol. Guidelines base decisions on LDL (and non-HDL) rather than on the total.',
+    sources: ['ml_chol', 'esc2019'],
+    pubmed: 'total cholesterol cardiovascular risk',
+  },
+
+  hdl: {
+    about: 'HDL cholesterol carries cholesterol away from the arteries. Low HDL goes with higher cardiovascular risk, but raising HDL with medicines hasn’t been shown to help. Very high HDL (> 2.3 mmol/L) has also been linked to higher risk.',
+    sources: ['ml_chol', 'esc2019'],
+    pubmed: 'HDL cholesterol cardiovascular risk',
+  },
+
+  trig: {
+    about: 'Triglycerides are blood fats that rise after meals, with alcohol, excess weight and insulin resistance. Usually measured fasting.',
+    thresholds: [
+      { label: 'Lower cardiovascular risk', value: '< 1.7 mmol/L (150 mg/dL)', source: 'esc2019' },
+      { label: 'Pancreatitis risk clinically significant', value: '> 10 mmol/L (≈ 880 mg/dL)', source: 'esc2019' },
+    ],
+    sources: ['ml_trig'],
+    pubmed: 'triglycerides cardiovascular risk',
+    rules: [(p) => {
+      if (p.v > 10) return F('alert', 'Triglycerides very high', `${v(p.v, 'mmol/L')} is above 10 mmol/L, where ESC/EAS consider the risk of pancreatitis clinically significant.`, ['esc2019']);
+      if (p.v >= 1.7) return F('info', 'Triglycerides above 1.7 mmol/L', `ESC/EAS set no goal for triglycerides, but values below 1.7 mmol/L (150 mg/dL) indicate lower risk. ${v(p.v, 'mmol/L')} is above that.`, ['esc2019']);
+      return null;
+    }],
+  },
+
+  lpa: {
+    about: 'Lipoprotein(a) is a cholesterol-carrying particle whose level is mostly inherited and stays fairly stable for life. High Lp(a) raises the risk of heart attack, stroke and aortic valve narrowing.',
+    thresholds: [
+      { label: 'High risk unlikely', value: '< 75 nmol/L (< 30 mg/dL)', source: 'eas2022' },
+      { label: 'Grey zone', value: '75–125 nmol/L (30–50 mg/dL)', source: 'eas2022' },
+      { label: 'Risk-enhancing factor', value: '> 105 nmol/L (> 50 mg/dL)', source: 'esc2025' },
+    ],
+    note: 'There is no exact conversion between mg/dL and nmol/L; the two sources round differently. Measuring Lp(a) at least once in adulthood is recommended.',
+    sources: ['eas2022', 'esc2025'],
+    pubmed: 'lipoprotein(a) cardiovascular risk',
+    rules: [(p) => {
+      const mgdl = normUnit(p.o.unit) === 'mg/dl' ? p.raw : null;
+      const nmol = p.v;
+      const high = nmol != null ? nmol > 105 : mgdl != null && mgdl > 50;
+      const low = nmol != null ? nmol < 75 : mgdl != null && mgdl < 30;
+      const shown = nmol != null ? v(nmol, 'nmol/L') : mgdl != null ? v(mgdl, 'mg/dL') : null;
+      if (!shown) return null;
+      if (high) return F('attention', 'Lp(a) raised', `${shown} is above 50 mg/dL (≈ 105 nmol/L), which the 2025 ESC/EAS update counts as a factor that increases cardiovascular risk. It’s largely inherited, so it can be relevant for close relatives too.`, ['esc2025', 'eas2022']);
+      if (low) return F('good', 'Lp(a) low', `${shown} is in the range where EAS considers high risk from Lp(a) unlikely.`, ['eas2022']);
+      return F('info', 'Lp(a) in the grey zone', `${shown} is in the EAS grey zone (30–50 mg/dL, 75–125 nmol/L).`, ['eas2022']);
+    }],
+  },
+
+  egfr: {
+    about: 'eGFR estimates how much blood the kidneys filter per minute, calculated from creatinine (and sometimes cystatin C), age and sex. Short-term dips happen with dehydration or after heavy exercise or meat meals.',
+    thresholds: [
+      { label: 'G1 normal or high', value: '≥ 90', source: 'kdigo2024' },
+      { label: 'G2 mildly decreased', value: '60–89', source: 'kdigo2024' },
+      { label: 'G3a mildly–moderately decreased', value: '45–59', source: 'kdigo2024' },
+      { label: 'G3b moderately–severely decreased', value: '30–44', source: 'kdigo2024' },
+      { label: 'G4 severely decreased', value: '15–29', source: 'kdigo2024' },
+      { label: 'G5 kidney failure', value: '< 15', source: 'kdigo2024' },
+    ],
+    note: 'Chronic kidney disease means abnormal kidney structure or function for at least 3 months. G1–G2 alone, without signs of kidney damage (e.g. albumin in urine), is not CKD.',
+    sources: ['ml_gfr', 'ckdepi2021'],
+    pubmed: 'estimated glomerular filtration rate CKD classification',
+    rules: [(p, c) => egfrRule(p, c, 'egfr')],
+  },
+
+  crea: {
+    about: 'Creatinine is a waste product from muscle, cleared by the kidneys. Its level depends on muscle mass, so it’s turned into eGFR for judging kidney function. With your sex and birth year in the profile, the app calculates eGFR (CKD-EPI 2021) for creatinine results that came without one.',
+    sources: ['ml_crea', 'ckdepi2021'],
+    pubmed: 'serum creatinine kidney function',
+  },
+
+  alt: {
+    about: 'ALT is an enzyme mainly found in the liver; it leaks into the blood when liver cells are damaged. Fatty liver, alcohol, medicines and hepatitis are common causes of raised values. Hard exercise can raise it briefly.',
+    thresholds: [
+      { label: 'Healthy upper limit, men', value: '29–33 U/L', source: 'acg2017' },
+      { label: 'Healthy upper limit, women', value: '19–25 U/L', source: 'acg2017' },
+    ],
+    note: 'Many labs use higher upper limits. ACG advises assessing ALT above these “true healthy” limits.',
+    sources: ['ml_alt'],
+    pubmed: 'alanine aminotransferase upper limit of normal',
+    rules: [(p, c) => {
+      if (!c.sex || p.status === 'high') return null;
+      const lim = c.sex === 'male' ? 33 : 25;
+      if (p.v > lim) return F('info', 'ALT above the ACG healthy limit', `${v(p.v, 'U/L')} is within the lab’s range but above ${lim} U/L, the upper end of the healthy ALT range ACG gives for ${c.sex === 'male' ? 'men' : 'women'}. ACG suggests looking into ALT above this level.`, ['acg2017']);
+      return null;
+    }],
+  },
+
+  tsh: {
+    about: 'TSH is the pituitary signal that drives the thyroid. High TSH usually means an underactive thyroid, low TSH an overactive one. It’s interpreted together with free T4.',
+    thresholds: [
+      { label: 'Subclinical hypothyroidism', value: 'TSH above range, free T4 normal', source: 'eta2013' },
+      { label: 'Subclinical hyperthyroidism', value: 'TSH below range, free T4 (and T3) normal', source: 'eta2015' },
+      { label: 'Grade 1 / grade 2 low TSH', value: '0.1–0.39 / < 0.1 mU/L', source: 'eta2015' },
+    ],
+    sources: ['ml_tsh'],
+    pubmed: 'TSH subclinical thyroid dysfunction',
+  },
+
+  ft4: {
+    about: 'Free T4 is the active, unbound thyroid hormone. Read together with TSH.',
+    sources: ['ml_t4'],
+    pubmed: 'free thyroxine thyroid function',
+  },
+
+  crp: {
+    about: 'C-reactive protein rises within hours of infection, injury or inflammation and falls again as it settles. A standard CRP test is for inflammation; the high-sensitivity test (hs-CRP) is used for cardiovascular risk.',
+    sources: ['ml_crp'],
+    pubmed: 'C-reactive protein interpretation',
+  },
+
+  hscrp: {
+    about: 'High-sensitivity CRP measures low CRP levels and is used as a marker of cardiovascular risk. Ideally the average of two tests, taken when you’re free of infection, is used.',
+    thresholds: [
+      { label: 'Low cardiovascular risk', value: '< 1 mg/L', source: 'aha2003' },
+      { label: 'Average risk', value: '1–3 mg/L', source: 'aha2003' },
+      { label: 'High risk', value: '> 3 mg/L', source: 'aha2003' },
+      { label: 'Repeat, look for infection/inflammation', value: '≥ 10 mg/L', source: 'aha2003' },
+    ],
+    sources: ['ml_crp'],
+    pubmed: 'high-sensitivity C-reactive protein cardiovascular risk',
+    rules: [(p) => {
+      if (p.v >= 10) return F('attention', 'hs-CRP 10 mg/L or more', `${v(p.v, 'mg/L')} is too high to judge cardiovascular risk. AHA/CDC advise repeating the test and looking for infection or inflammation.`, ['aha2003']);
+      const cat = p.v < 1 ? 'low' : p.v <= 3 ? 'average' : 'high';
+      return F(cat === 'high' ? 'info' : 'good', `hs-CRP: ${cat} cardiovascular risk category`, `${v(p.v, 'mg/L')} falls in the AHA/CDC “${cat} risk” category (< 1, 1–3, > 3 mg/L).`, ['aha2003']);
+    }],
+  },
+
+  vitd: {
+    about: '25-hydroxyvitamin D shows vitamin D status. It’s lower in winter and with little sun exposure. Expert bodies disagree on the ideal level.',
+    thresholds: [
+      { label: 'Risk of deficiency', value: '< 30 nmol/L (12 ng/mL)', source: 'iom2011' },
+      { label: 'Risk of inadequacy', value: '30–49 nmol/L', source: 'iom2011' },
+      { label: 'Sufficient for nearly everyone', value: '≥ 50 nmol/L (20 ng/mL)', source: 'iom2011' },
+      { label: 'Potential for adverse effects', value: '> 125 nmol/L (50 ng/mL)', source: 'iom2011' },
+    ],
+    note: 'The Endocrine Society (2024) no longer endorses specific target levels and advises against routine testing in healthy people.',
+    sources: ['ml_vitd', 'es2024'],
+    pubmed: '25-hydroxyvitamin D status threshold',
+    rules: [(p) => {
+      if (p.v > 125) return F('attention', 'Vitamin D above 125 nmol/L', `${v(p.v, 'nmol/L')} is above the level where IOM saw reason for concern about adverse effects. Usually from high-dose supplements.`, ['iom2011']);
+      if (p.v < 30) return F('attention', 'Vitamin D: risk of deficiency (IOM)', `${v(p.v, 'nmol/L')} is below 30 nmol/L (12 ng/mL).`, ['iom2011']);
+      if (p.v < 50) return F('info', 'Vitamin D: possibly inadequate (IOM)', `${v(p.v, 'nmol/L')} is in IOM’s 30–49 nmol/L range; 50 nmol/L covers the needs of nearly everyone.`, ['iom2011', 'es2024']);
+      return F('good', 'Vitamin D sufficient (IOM)', `${v(p.v, 'nmol/L')} is at or above 50 nmol/L (20 ng/mL).`, ['iom2011']);
+    }],
+  },
+
+  b12: {
+    about: 'Vitamin B12 is needed for blood cells and nerves. Low levels come from low intake (vegan diet), poor absorption (pernicious anaemia, stomach surgery) or medicines such as metformin and acid blockers. Results in the low-normal range can be inconclusive; active B12 or methylmalonic acid (MMA) then helps.',
+    sources: ['ml_b', 'nice239'],
+    pubmed: 'vitamin B12 deficiency diagnosis',
+  },
+
+  folate: {
+    about: 'Folate is needed for blood cell production. Low levels come from low intake of greens and legumes, alcohol, malabsorption or some medicines.',
+    thresholds: [{ label: 'Folate deficiency', value: '< 7 nmol/L (3 µg/L)', source: 'bsh2014' }],
+    sources: ['ml_b'],
+    pubmed: 'folate deficiency diagnosis',
+    rules: [(p) => (p.v < 7 ? F('attention', 'Folate in the deficiency range', `${v(p.v, 'nmol/L')} is below 7 nmol/L (3 µg/L), the BSH cut-off for folate deficiency.`, ['bsh2014']) : null)],
+  },
+
+  wbc: { about: 'White blood cells fight infection. Counts rise with infection, inflammation, stress, smoking and some medicines, and fall with some viral infections, medicines or bone-marrow problems.', sources: ['ml_wbc'], pubmed: 'white blood cell count interpretation' },
+  plt: { about: 'Platelets help blood clot. Counts can rise with inflammation or iron deficiency and fall with some infections, medicines, liver disease or immune conditions.', sources: ['ml_plt'], pubmed: 'platelet count interpretation' },
+  hct: { about: 'Hematocrit is the share of blood volume made up of red cells. It moves together with hemoglobin.', sources: ['ml_hct'], pubmed: 'hematocrit interpretation' },
+  mcv: { about: 'MCV is the average size of red blood cells. Small cells (low MCV) suggest iron deficiency or thalassaemia trait; large cells (high MCV) suggest B12 or folate deficiency, alcohol, liver disease or some medicines.', sources: ['ml_mcv', 'ml_indices'], pubmed: 'mean corpuscular volume anemia classification' },
+};
+KB.egfr_calc = {
+  ...KB.egfr,
+  about: 'Calculated by the app from your creatinine, age and sex with the CKD-EPI 2021 equation (without race), as recommended internationally. Your lab may report its own eGFR, which takes precedence.',
+  rules: [(p, c) => egfrRule(p, c, 'egfr_calc')],
+};
+
+function egfrRule(p, c, key) {
+  if (p.v >= 60) return null;
+  const low = c.series(key).filter((q) => q.v < 60);
+  const span = low.length > 1 ? (low[low.length - 1].t - low[0].t) / 864e5 : 0;
+  const cat = p.v >= 45 ? 'G3a' : p.v >= 30 ? 'G3b' : p.v >= 15 ? 'G4' : 'G5';
+  if (span >= 90) return F('alert', `eGFR below 60 for over 3 months (${cat})`,
+    `Results below 60 from ${fmtDate(low[0].o.date)} to ${fmtDate(low[low.length - 1].o.date)}. A reduced eGFR lasting at least 3 months meets the KDIGO definition of chronic kidney disease.`, ['kdigo2024']);
+  return F('attention', `eGFR in category ${cat}`, `${v(p.v, 'mL/min/1.73m²')} is below 60. KDIGO speaks of chronic kidney disease only if this persists for at least 3 months, so a repeat test matters.`, ['kdigo2024']);
+}
+
+// ---- patterns across tests ---------------------------------------------------
+
+export const PATTERNS = [
+  // Glucose and HbA1c both in the diabetes range around the same time.
+  (c) => {
+    const g = c.latest('glucose');
+    const a = g && c.near('hba1c', g, 30);
+    if (!g || !a || g.v < 7.0 || a.v < 48) return null;
+    return { keys: ['glucose', 'hba1c'], level: 'alert', title: 'Glucose and HbA1c both in the diabetes range',
+      text: `Fasting glucose ${v(g.v, 'mmol/L')} and HbA1c ${v(a.v, 'mmol/mol')} around ${fmtDate(g.o.date)}. ADA counts two abnormal results from different tests as confirming diabetes — to be discussed with a doctor.`, sources: ['ada2026'] };
+  },
+  // Low hemoglobin with ferritin < 45: iron deficiency anaemia pattern.
+  (c) => {
+    const hb = c.latest('hb');
+    const fe = hb && c.near('ferritin', hb, 30);
+    if (!hb || !fe || hb.status !== 'low' || fe.v >= 45) return null;
+    return { keys: ['hb', 'ferritin'], level: 'alert', title: 'Pattern of iron deficiency anaemia',
+      text: `Low hemoglobin (${v(hb.v, 'g/L')}) with ferritin ${v(fe.v, 'µg/L')}. In people with anaemia, AGA uses ferritin below 45 µg/L to diagnose iron deficiency and recommends finding the cause (e.g. a source of blood loss).`, sources: ['aga2020'] };
+  },
+  // Thyroid: TSH out of range, classified with free T4.
+  (c) => {
+    const t = c.latest('tsh');
+    if (!t || (t.status !== 'high' && t.status !== 'low')) return null;
+    const f = c.near('ft4', t, 14);
+    if (!f) {
+      return { keys: ['tsh'], level: 'attention', title: `TSH ${t.status === 'high' ? 'above' : 'below'} range without free T4`,
+        text: 'Thyroid guidelines classify an abnormal TSH together with free T4. Measuring free T4 with the next TSH makes the result interpretable.', sources: [t.status === 'high' ? 'eta2013' : 'eta2015'] };
+    }
+    if (t.status === 'high' && f.status === 'normal') {
+      return { keys: ['tsh', 'ft4'], level: t.v > 10 ? 'alert' : 'attention', title: 'Pattern of subclinical hypothyroidism',
+        text: `TSH ${v(t.v, 'mU/L')} above range with normal free T4. ETA recommends repeating TSH and free T4 (with TPO antibodies) after 2–3 months.` + (t.v > 10 ? ' With TSH above 10 mU/L, ETA recommends treatment for people under 65–70 even without symptoms.' : ''), sources: ['eta2013'] };
+    }
+    if (t.status === 'low' && f.status === 'normal') {
+      return { keys: ['tsh', 'ft4'], level: 'attention', title: `Pattern of subclinical hyperthyroidism (grade ${t.v < 0.1 ? 2 : 1})`,
+        text: `TSH ${v(t.v, 'mU/L')} below range with normal free T4. ETA grades TSH 0.1–0.39 as grade 1 and below 0.1 as grade 2; free T3 completes the picture.`, sources: ['eta2015'] };
+    }
+    if ((t.status === 'high' && f.status === 'low') || (t.status === 'low' && f.status === 'high')) {
+      const hypo = t.status === 'high';
+      return { keys: ['tsh', 'ft4'], level: 'alert', title: hypo ? 'Pattern of an underactive thyroid' : 'Pattern of an overactive thyroid',
+        text: `TSH ${hypo ? 'high' : 'low'} (${v(t.v, 'mU/L')}) with free T4 ${hypo ? 'low' : 'high'} (${v(f.v, 'pmol/L')}). This combination needs medical assessment.`, sources: [hypo ? 'eta2013' : 'eta2015'] };
+    }
+    return null;
+  },
+  // Lipids measured but never Lp(a).
+  (c) => {
+    if (c.latest('lpa') || !(c.latest('ldl') || c.latest('chol'))) return null;
+    return { keys: ['ldl'], level: 'info', title: 'Lp(a) has never been measured',
+      text: 'The 2025 ESC/EAS update recommends measuring lipoprotein(a) at least once in every adult’s lifetime. It is mostly inherited, so one test is usually enough.', sources: ['esc2025', 'eas2022'] };
+  },
+];

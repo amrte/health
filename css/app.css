@@ -336,4 +336,6 @@ a.finding-title { color: var(--accent-ink); text-decoration: none; }
 .about strong { color: var(--ink); }
 table.limits { width: 100%; border-collapse: collapse; font-size: 14px; }
 .limits td { padding: 6px 8px 6px 0; border-top: 1px solid var(--grid); vertical-align: top; }
+.limits .limit-value { width: 45%; font-weight: 550; }
+.about { overflow-wrap: anywhere; }
 ul.sources { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }

@@ -51,11 +51,13 @@ export function aboutCard(key) {
     kb.thresholds?.length ? h('div', null,
       h('h3', null, 'Guideline limits'),
       h('table', { class: 'limits' }, h('tbody', null, kb.thresholds.map((t) =>
-        h('tr', null, h('td', null, t.label), h('td', { class: 'nowrap' }, t.value), h('td', { class: 'muted small' }, SOURCES[t.source]?.short ?? '')))))) : null,
+        h('tr', null,
+          h('td', null, t.label, h('div', { class: 'muted small' }, SOURCES[t.source]?.short ?? '')),
+          h('td', { class: 'limit-value' }, t.value)))))) : null,
     kb.note ? h('p', { class: 'muted small' }, kb.note) : null,
     h('h3', null, 'Sources'),
     h('ul', { class: 'sources' }, [...ids].map((id) => SOURCES[id]).filter(Boolean).map((s) =>
-      h('li', null, h('a', { href: s.url, target: '_blank', rel: 'noopener' }, s.title), h('span', { class: 'muted' }, ` — ${s.org}, ${s.year}`)))),
+      h('li', null, h('a', { href: s.url, target: '_blank', rel: 'noopener' }, s.title), h('span', { class: 'muted' }, ` — ${s.org}${s.year ? ', ' + s.year : ''}`)))),
     pubmed ? h('p', null, h('a', { class: 'btn', href: pubmed, target: '_blank', rel: 'noopener' }, 'Recent research on PubMed ↗')) : null,
     h('p', { class: 'muted small' }, `Guideline content reviewed ${fmtDate(REVIEWED)}. Information only — your doctor knows the context these rules don’t.`));
 }

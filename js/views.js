@@ -60,7 +60,10 @@ export function viewOverview(root) {
     const entries = [...state.byMetric.values()].filter((e) => matches(overviewQuery, metricSearchText(e)));
     const out = [];
     if (!overviewQuery) {
-      const important = state.findings.filter((f) => f.level === 'alert' || f.level === 'attention');
+      // A guideline finding for a test already says it's out of range; skip the generic one.
+      const strong = state.findings.filter((f) => (f.level === 'alert' || f.level === 'attention') && f.kind !== 'range');
+      const important = state.findings.filter((f) => (f.level === 'alert' || f.level === 'attention') &&
+        !(f.kind === 'range' && strong.some((g) => g.keys.includes(f.keys[0]))));
       if (important.length) {
         const shown = showAllFindings ? important : important.slice(0, 4);
         out.push(h('section', { class: 'group' },

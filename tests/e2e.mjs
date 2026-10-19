@@ -36,6 +36,20 @@ const rows = await page.locator('.group .row').count();
 assert.ok(rows > 15, `overview rows: ${rows}`);
 assert.ok(await page.getByText('Vaccinations due').isVisible());
 
+step('profile and findings');
+await page.goto(base + '#/data');
+await page.locator('select').first().selectOption('male');
+await page.getByPlaceholder('e.g. 1985').fill('1980');
+await page.getByRole('button', { name: 'Save profile' }).click();
+await page.goto(base);
+await page.locator('.findings .finding').first().waitFor();
+await shot('02b-findings');
+await page.goto(base + '#/test/egfr_calc');
+await page.locator('.chart svg').waitFor();
+await page.goto(base + '#/test/ferritin');
+await page.getByText('About this test').waitFor();
+assert.ok(await page.getByRole('link', { name: /ferritin concentrations/ }).isVisible());
+
 step('hemoglobin from g/L, g/dL and г/л on one chart');
 await page.goto(base + '#/test/hb');
 await page.locator('.chart svg').waitFor();

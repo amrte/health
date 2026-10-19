@@ -25,6 +25,37 @@ works offline.
   see its value and source. A full table lists every result.
 - Search across tests, labs and notes.
 
+**Evaluation**
+- Each test gets a *What this means* card. The overview lists the findings
+  worth a look. Every finding shows where it comes from.
+- General checks: out of the lab's range, out of range several times in a
+  row, steady rises or falls, values drifting toward a limit, and old
+  out-of-range results that were never re-checked.
+- Guideline rules, each linked to its source:
+  - WHO anaemia and ferritin cut-offs
+  - ADA/WHO glucose and HbA1c ranges
+  - ESC/EAS LDL goals, triglycerides and Lp(a)
+  - KDIGO eGFR categories, including the 3-month rule for chronic kidney
+    disease
+  - ACG healthy ALT limits
+  - IOM vitamin D, AHA/CDC hs-CRP, BSH folate
+- Patterns across tests:
+  - glucose and HbA1c both in the diabetes range
+  - low hemoglobin with ferritin < 45 µg/L
+  - TSH read together with free T4 (ETA)
+  - ferritin read together with CRP
+  - Lp(a) never measured
+- The profile (sex, birth year) enables limits that differ by sex or age.
+  It also lets the app calculate eGFR from creatinine (CKD-EPI 2021) and
+  non-HDL cholesterol.
+- *About this test*: what the test measures, common causes of high and low
+  values, guideline limits, sources, and a PubMed link to guidelines and
+  systematic reviews from the last 5 years.
+- All guideline content is in `js/knowledge.js`, together with the date it
+  was reviewed. A number goes in only once it has been checked against its
+  source. Where that wasn't possible (for example HDL cut-offs, or hemoglobin
+  limits above age 65), the app uses only the lab's own range.
+
 **Vaccinations**
 - Date, vaccine, diseases covered, dose, batch number, place and next-due date.
 - Diseases are filled in from the vaccine name (e.g. *Boostrix Polio* →
@@ -78,6 +109,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/views.js`, `js/chart.js` | Overview, test detail, reports; SVG charts |
 | `js/editor.js` | Add/edit lab report |
 | `js/vaccines.js` | Vaccinations |
+| `js/evaluate.js`, `js/knowledge.js` | Evaluation engine; guideline rules and sources |
+| `js/calc.js`, `js/insights.js` | Calculated values (eGFR, non-HDL); findings UI |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
 Results are stored as printed (value, unit and range as text) and are parsed
