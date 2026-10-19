@@ -279,6 +279,8 @@ works offline.
   overdue or due within 90 days also appear on the overview.
 
 **Data**
+- Sync between devices (iPhone, Mac, other browsers) through a private GitHub
+  repository, encrypted on the device; see below.
 - Export and import a backup file (JSON with photos), via the iOS share sheet.
 - Demo data: seven made-up check-ups from Finnish, German and Ukrainian labs
   plus a few vaccinations. You can remove it in one go.
@@ -318,9 +320,40 @@ One-time setup (repository owner):
 Then open the URL in Safari, tap Share → *Add to Home Screen*, and always
 start the app from that icon. Home Screen apps keep their data (Safari can
 clear website storage after a while), and the app works offline. Still,
-**export a backup regularly**, because the data exists only on the device.
+**export a backup regularly** or turn on sync (below), because otherwise
+the data exists only on the device.
 On a Mac, the same URL works in Safari, Chrome or Firefox, and the data
 stays separate per browser.
+
+## Syncing between devices
+
+Each browser keeps its own copy of the data. To keep them in step and have a
+copy that survives a cleared browser, the app can sync through a **private**
+GitHub repository of your own (Data → *Sync between devices*):
+
+1. Create a private repository, e.g. `health-data` (github.com/new, tick
+   *Private*). The app refuses public repositories.
+2. Create a fine-grained token (Settings → Developer settings → Personal
+   access tokens → Fine-grained tokens): repository access *Only select
+   repositories* → that repository; permissions → Repository → **Contents:
+   Read and write**. Pick a long expiry.
+3. On the first device enter the repository (`you/health-data`), the token and
+   a passphrase of at least 10 characters, twice. On every other device enter
+   the same repository and passphrase (once).
+
+Everything is encrypted in the browser before it leaves the device:
+PBKDF2-SHA-256 (600,000 iterations) derives an AES-256-GCM key from the
+passphrase. The repository holds `meta.json` (salt and a check value),
+`data.enc` (all records and the profile) and `files/<id>.enc` (photos and
+PDFs). The passphrase itself is never stored; each device keeps only a
+non-extractable key. If the passphrase is lost, the copy on GitHub can't be
+read, but the data on your devices stays.
+
+Changes are sent a few seconds after you make them and fetched when the app
+opens or comes back to the foreground. Each device remembers a fingerprint of
+every record from the last sync, so edits, additions and deletions on either
+side carry over; if the same record was changed on two devices, the newer edit
+wins, and an edit wins over a deletion.
 
 ## Development
 
@@ -359,6 +392,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/compare.js` | Two values on one chart, correlation |
 | `js/reminders.js`, `js/screening.js` | Reminders, suggested retests, Finnish and German screening |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
+| `js/sync-core.js` | Sync: three-way merge, encryption (pure functions) |
+| `js/sync.js`, `js/sync-ui.js` | Sync: GitHub transfer, automatic sync; setup card |
 
 The logo is `icons/logo.webp` (the pack's lettering, cut out; on dark
 backgrounds it sits on a cream label). The olive branch is `icons/olive-branch.png` (a

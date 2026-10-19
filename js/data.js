@@ -4,6 +4,7 @@ import { h, toast, go } from './dom.js';
 import * as db from './db.js';
 import { state, load, saveProfile, bloodType } from './store.js';
 import { REGIONS } from './score2.js';
+import { syncCard } from './sync-ui.js';
 import { fmtBytes, todayIso, fmtDate } from './format.js';
 import { pageHead } from './ui.js';
 import { demoData, DEMO_PROFILE } from './demo.js';
@@ -208,6 +209,8 @@ export async function viewData(root) {
   root.append(h('section', { class: 'card' }, h('h2', null, 'Storage'), storageInfo, persistBtn,
     h('p', { class: 'hint' }, howTo, ' Either way, export a backup now and then — it is your copy if the browser or the device is reset.')));
   refreshStorage();
+
+  root.append(await syncCard());
 
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Install on iPhone'),

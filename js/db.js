@@ -72,18 +72,36 @@ export async function get(store, id) {
   return request(db.transaction(store).objectStore(store).get(id));
 }
 
+export async function keys(store) {
+  const db = await open();
+  if (!db) return [...memory[store].keys()];
+  return request(db.transaction(store).objectStore(store).getAllKeys());
+}
+
+// Called after every write the user makes (sync uses it to send changes).
+const writeListeners = new Set();
+export function onWrite(fn) {
+  writeListeners.add(fn);
+  return () => writeListeners.delete(fn);
+}
+
 // Applies all changes in one transaction: { put: { store: [items] }, del: { store: [ids] }, clear: [stores] }.
-export async function write({ put = {}, del = {}, clear = [] }) {
+// `quiet`: don't notify listeners (sync's own writes).
+export async function write({ put = {}, del = {}, clear = [] }, { quiet = false } = {}) {
   const db = await open();
   if (!db) {
     for (const st of clear) memory[st].clear();
     for (const [st, ids] of Object.entries(del)) for (const id of ids) memory[st].delete(id);
     for (const [st, items] of Object.entries(put)) for (const item of items) memory[st].set(item.id, structuredClone(item));
-    return;
+  } else {
+    const tx = db.transaction(STORES, 'readwrite');
+    for (const s of clear) tx.objectStore(s).clear();
+    for (const [s, ids] of Object.entries(del)) for (const id of ids) tx.objectStore(s).delete(id);
+    for (const [s, items] of Object.entries(put)) for (const item of items) tx.objectStore(s).put(item);
+    await finished(tx);
   }
-  const tx = db.transaction(STORES, 'readwrite');
-  for (const s of clear) tx.objectStore(s).clear();
-  for (const [s, ids] of Object.entries(del)) for (const id of ids) tx.objectStore(s).delete(id);
-  for (const [s, items] of Object.entries(put)) for (const item of items) tx.objectStore(s).put(item);
-  return finished(tx);
+  // Settings other than the profile (sync state, demo flag) don't need syncing.
+  const touched = [...Object.keys(put), ...Object.keys(del), ...clear];
+  const onlyLocal = touched.every((s) => s === 'settings') && [...(put.settings ?? []).map((x) => x.id), ...(del.settings ?? [])].every((id) => id !== 'profile');
+  if (!quiet && !onlyLocal) for (const fn of writeListeners) fn();
 }

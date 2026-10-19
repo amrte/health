@@ -757,3 +757,13 @@ mark { background: var(--accent-soft); }
 .date-own input { flex: 1; min-width: 0; }
 .unit-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .unit-choices .btn { font-weight: 600; }
+
+/* Sync */
+.sync-line { display: flex; align-items: center; gap: 8px; font-weight: 600; margin: 8px 0; }
+.sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--good); flex: none; }
+.sync-dot.err { background: var(--critical); }
+.sync-dot.busy { background: var(--warn); animation: pulse 1s ease-in-out infinite alternate; }
+@keyframes pulse { from { opacity: .35; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sync-dot.busy { animation: none; } }
+.sync-card details > summary { cursor: pointer; margin: 6px 0; }
+.sync-card .btn-row input { flex: 1; min-width: 180px; }

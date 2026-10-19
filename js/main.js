@@ -6,6 +6,7 @@ import { isMemoryOnly } from './db.js';
 import { viewOverview, viewMetric, viewReports, viewReport } from './views.js';
 import { viewEditor, editorDirty, clearDirty } from './editor.js';
 import { viewData, seedDemoOnce } from './data.js';
+import { startAutoSync } from './sync.js';
 import { viewDiscuss } from './discuss.js';
 import { viewFitness, viewFitnessKind } from './fitness.js';
 import { viewBp } from './bp.js';
@@ -131,6 +132,13 @@ try {
   throw err;
 }
 route();
+
+// Sync: start after the first screen is shown; redraw when another device's
+// changes arrive (not while something is being edited).
+startAutoSync();
+window.addEventListener('health:synced', () => {
+  if (!editorDirty() && !vaccineEditorDirty() && !dentalDirty()) route();
+});
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   // When an update takes over, reload once so the page and its files are the same version.
