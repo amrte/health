@@ -15,6 +15,7 @@ const DAY = 864e5;
 export const KINDS = {
   rhr: { name: 'Resting heart rate', unit: 'bpm', digits: 0, better: 'lower' },
   night_hr: { name: 'Night-time heart rate', unit: 'bpm', digits: 0, better: 'lower' },
+  low_hr: { name: 'Lowest heart rate of the day', unit: 'bpm', digits: 0, better: 'lower' },
   hrv: { name: 'Heart rate variability (RMSSD)', unit: 'ms', digits: 0, better: 'higher' },
   sleep_min: { name: 'Sleep', unit: 'h', digits: 1, scale: 1 / 60, better: 'higher' },
   sleep_score: { name: 'Sleep score', unit: '', digits: 0, better: 'higher' },
@@ -24,7 +25,7 @@ export const KINDS = {
   active_min: { name: 'Active time', unit: 'min', digits: 0, better: 'higher' },
   kcal: { name: 'Calories', unit: 'kcal', digits: 0 },
 };
-const ORDER = ['rhr', 'night_hr', 'hrv', 'sleep_min', 'sleep_score', 'steps', 'active_min', 'ans', 'breathing', 'kcal'];
+const ORDER = ['rhr', 'night_hr', 'low_hr', 'hrv', 'sleep_min', 'sleep_score', 'steps', 'active_min', 'ans', 'breathing', 'kcal'];
 
 const RANGES = [['30 days', 30], ['90 days', 90], ['1 year', 365], ['All', 0]];
 let range = 90;
@@ -104,12 +105,13 @@ function importCard() {
   return h('section', { class: 'card' },
     h('h2', null, 'Import from Polar'),
     h('ol', { class: 'steps plain' },
-      h('li', null, 'In a browser, sign in at ', h('a', { href: 'https://account.polar.com', target: '_blank', rel: 'noopener' }, 'account.polar.com'), ' and request ', h('em', null, 'Download your data'), '. Polar emails a download link when the export is ready.'),
-      h('li', null, 'Save the ZIP file (on iPhone: to Files).'),
-      h('li', null, 'Choose it here. Single training sessions exported from Polar Flow as CSV or JSON work too.')),
+      h('li', null, 'Sign in at ', h('a', { href: 'https://account.polar.com', target: '_blank', rel: 'noopener' }, 'account.polar.com'),
+        ' (works in Safari on iPhone), choose ', h('em', null, 'Download your data'), ' in the menu and then ', h('em', null, 'Download'), '.'),
+      h('li', null, 'Polar prepares the export and emails you a link to a ZIP file. Save it (on iPhone: to Files).'),
+      h('li', null, 'Choose the ZIP here. Training sessions exported one by one from Polar Flow (CSV or JSON) work too.')),
     h('div', { class: 'btn-row' }, h('label', { class: 'btn primary', for: 'polar-in' }, 'Choose Polar file(s)…'), input),
     status,
-    h('p', { class: 'hint' }, 'The file is read on this device; nothing is uploaded. Importing again updates existing days instead of duplicating them.'));
+    h('p', { class: 'hint' }, 'Read on this device; nothing is uploaded. Imported: workouts, daily steps and active time, sleep and sleep score, Nightly Recharge (night-time heart rate, HRV, breathing rate, ANS charge) and the lowest heart rate of each day. Importing again updates days instead of duplicating them.'));
 }
 
 export function viewFitness(root) {

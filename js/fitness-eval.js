@@ -33,10 +33,10 @@ export function fitnessFindings(now = Date.now()) {
   }
 
   // Changes against your own baseline (no guideline — just your data).
-  for (const kind of ['rhr', 'night_hr']) {
+  for (const kind of ['rhr', 'night_hr', 'low_hr']) {
     const r = recentVsBaseline(kind, now);
     if (r && !r.stale && r.base != null && r.recent - r.base >= 5) {
-      out.push(F('info', 'Heart rate higher than your usual', `Your ${kind === 'rhr' ? 'resting' : 'night-time'} heart rate averaged ${fmtNum(Math.round(r.recent))} bpm in the last 7 days vs. ${fmtNum(Math.round(r.base))} in the 4 weeks before. Short-term rises often go with illness, stress, alcohol, hard training or short sleep.`));
+      out.push(F('info', 'Heart rate higher than your usual', `Your ${{ rhr: 'resting', night_hr: 'night-time', low_hr: 'lowest daily' }[kind]} heart rate averaged ${fmtNum(Math.round(r.recent))} bpm in the last 7 days vs. ${fmtNum(Math.round(r.base))} in the 4 weeks before. Short-term rises often go with illness, stress, alcohol, hard training or short sleep.`));
       break;
     }
   }

@@ -56,6 +56,30 @@ works offline.
   source. Where that wasn't possible (for example HDL cut-offs, or hemoglobin
   limits above age 65), the app uses only the lab's own range.
 
+**Fitness (Polar)**
+- Import the Polar account export: at account.polar.com choose *Download
+  your data*, and Polar emails a link to a ZIP. Single sessions exported from
+  Polar Flow (CSV or JSON) also work. The ZIP is read on the device, one
+  file at a time.
+- Imported:
+  - workouts (sport, duration, distance, heart rate, calories, cardio load)
+  - daily steps, active time and calories
+  - sleep duration and sleep score
+  - Nightly Recharge: night-time heart rate, HRV (RMSSD), breathing rate and
+    ANS charge
+  - the lowest heart rate of each day, from 24/7 heart rate
+- Re-importing updates days instead of duplicating them. Unrecognised files
+  are listed after the import.
+- On screen:
+  - 7-day tiles compared with the previous 4 weeks
+  - weekly workout minutes against WHO's 150-minute line
+  - trend charts and monthly averages
+- Findings: activity vs. WHO 2020, sleep vs. the AASM/SRS "7 hours or more",
+  and heart rate or HRV changes against your own baseline.
+- Polar doesn't document the export format. The parser follows real export
+  files and open-source parsers, and is tested with made-up files in the
+  same format (`tests/polar.test.js`).
+
 **Discuss with Claude**
 - A button on the overview and on every test page. It builds a summary to paste
   into the Claude app. You choose:
@@ -148,6 +172,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/vaccines.js` | Vaccinations |
 | `js/evaluate.js`, `js/knowledge.js` | Evaluation engine; guideline rules and sources |
 | `js/calc.js`, `js/insights.js` | Calculated values (eGFR, non-HDL); findings UI |
+| `js/polar.js`, `js/zip.js` | Polar import; streaming ZIP reader |
+| `js/fitness.js`, `js/fitness-eval.js` | Fitness screen and findings |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
 Results are stored as printed (value, unit and range as text) and are parsed
@@ -156,8 +182,6 @@ results saved earlier.
 
 ## Planned next
 
-- **Polar:** import the Flow data export (*Account → Download your data*) for
-  resting heart rate, sleep, Nightly Recharge and training load.
 - **Blood pressure:** quick entry and a trend chart.
 - **DNA:** read the raw data files from 23andMe and tellmeGen and show a short
   list of well-known variants, linked to related lab tests (e.g. iron). This is

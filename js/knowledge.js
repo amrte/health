@@ -50,6 +50,10 @@ export const SOURCES = {
     title: 'Diagnosis and management of endogenous subclinical hyperthyroidism (Eur Thyroid J 2015;4:149–163)', url: 'https://doi.org/10.1159/000438750' },
   bsh2014: { short: 'BSH 2014', org: 'British Society for Haematology', year: 2014,
     title: 'Diagnosis and treatment of cobalamin and folate disorders (Br J Haematol 2014;166:496–513)', url: 'https://b-s-h.org.uk/guidelines/guidelines/diagnosis-of-b12-and-folate-deficiency' },
+  who2020pa: { short: 'WHO 2020', org: 'World Health Organization', year: 2020,
+    title: 'Guidelines on physical activity and sedentary behaviour', url: 'https://www.who.int/publications/i/item/9789240015128' },
+  aasm2015: { short: 'AASM/SRS 2015', org: 'American Academy of Sleep Medicine / Sleep Research Society', year: 2015,
+    title: 'Recommended amount of sleep for a healthy adult (J Clin Sleep Med 2015;11:591–592)', url: 'https://pubmed.ncbi.nlm.nih.gov/25979105/' },
   nice239: { short: 'NICE NG239', org: 'National Institute for Health and Care Excellence', year: 2024,
     title: 'Vitamin B12 deficiency in over 16s: diagnosis and management', url: 'https://www.nice.org.uk/guidance/ng239' },
 };

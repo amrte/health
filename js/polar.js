@@ -1,158 +1,236 @@
-// Polar import: the account data export (ZIP of JSON files), single training
-// sessions exported from Polar Flow (JSON/CSV), and AccessLink-style JSON.
+// Polar import: the account data export from account.polar.com (a ZIP of JSON
+// files), single sessions exported from Polar Flow (JSON or CSV), and
+// AccessLink-style JSON.
 //
-// Parsers are deliberately tolerant: they look for known keys in several
-// spellings and skip what they don't recognise, reporting it back to the user.
+// The export format is not documented by Polar. File names and keys follow real
+// export files and open-source parsers (checked 2026-10); see tests/polar.test.js.
+// Unknown files are skipped and reported back to the user.
 
 import { listZip, readEntry } from './zip.js';
 
 // ---- helpers ------------------------------------------------------------------
 
+// Value at the first dotted path that exists. Keys match case-insensitively,
+// because Polar's exports and SDK spell some keys differently (Rmssd / RMSSD).
 export function get(obj, ...paths) {
   for (const path of paths) {
     let v = obj;
     for (const k of path.split('.')) {
-      if (v == null) break;
-      v = Array.isArray(v) && /^\d+$/.test(k) ? v[Number(k)] : v[k];
+      if (v == null || typeof v !== 'object') { v = undefined; break; }
+      if (Array.isArray(v)) { v = /^\d+$/.test(k) ? v[Number(k)] : undefined; continue; }
+      if (k in v) { v = v[k]; continue; }
+      const lk = k.toLowerCase();
+      const hit = Object.keys(v).find((x) => x.toLowerCase() === lk);
+      v = hit ? v[hit] : undefined;
     }
     if (v != null && v !== '') return v;
   }
   return undefined;
 }
 
-// "PT1H2M3.5S", 3723500 (ms), "01:02:03" → seconds.
-export function seconds(v, { msIfNumber = true } = {}) {
+// "PT1H2M3.5S" or "HH:MM:SS" → seconds.
+export function seconds(v) {
   if (v == null) return null;
-  if (typeof v === 'number') return msIfNumber ? v / 1000 : v;
+  if (typeof v === 'number') return v;
   const s = String(v).trim();
   let m = s.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?$/i);
-  if (m && s.length > 1) return (Number(m[1] ?? 0) * 86400) + (Number(m[2] ?? 0) * 3600) + (Number(m[3] ?? 0) * 60) + Number(m[4] ?? 0);
+  if (m && s.length > 2) return Number(m[1] ?? 0) * 86400 + Number(m[2] ?? 0) * 3600 + Number(m[3] ?? 0) * 60 + Number(m[4] ?? 0);
   m = s.match(/^(\d+):(\d\d):(\d\d(?:\.\d+)?)$/);
   if (m) return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
   return null;
 }
 
-const num = (v) => (v == null || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+const num = (v) => (v == null || v === '' || v === 'NaN' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
 const day = (v) => (typeof v === 'string' && /^\d{4}-\d\d-\d\d/.test(v) ? v.slice(0, 10) : null);
-const measure = (kind, date, value) => (date && value != null && Number.isFinite(value) ? { id: `polar:${kind}:${date}`, date, kind, value, source: 'polar' } : null);
+const measure = (kind, date, value) =>
+  (date && value != null && Number.isFinite(value) ? { id: `polar:${kind}:${date}`, date, kind, value, source: 'polar' } : null);
+const round1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
 
-function prettySport(s) {
-  if (!s) return '';
+// Only "1" is confirmed across parsers; other ids keep their number.
+const SPORT_IDS = { 1: 'Running' };
+function sportName(o) {
+  const named = get(o, 'name');
+  if (named && typeof named === 'string') return named;
+  const old = get(o, 'exercises.0.sport', 'detailed_sport_info', 'sport');
+  if (typeof old === 'string') return pretty(old);
+  const id = get(o, 'sport.id', 'exercises.0.sport.id');
+  return id != null ? SPORT_IDS[id] ?? `Sport ${id}` : 'Workout';
+}
+function pretty(s) {
   const t = String(s).replace(/_/g, ' ').toLowerCase();
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// ---- parsers --------------------------------------------------------------------
+// ---- training sessions ----------------------------------------------------------------
 
-function workoutFrom(o, idHint) {
-  const start = get(o, 'startTime', 'start_time', 'start', 'exercises.0.startTime');
-  if (!start || !day(String(start))) return null;
-  const ex = get(o, 'exercises.0') ?? {};
-  const durationS = seconds(get(o, 'duration', 'exercises.0.duration', 'durationMillis') ?? get(ex, 'duration'),
-    { msIfNumber: get(o, 'durationMillis') != null || typeof get(o, 'duration') === 'number' });
-  const sport = get(o, 'sport', 'detailed_sport_info', 'exercises.0.sport', 'name', 'sport.name', 'exercises.0.sport.name');
+// Handles the current export schema (durationMillis, hrAvg, trainingLoadReport),
+// the older "exportVersion 1.4" schema (duration "PT…S", exercises[0].heartRate)
+// and AccessLink exercises (duration "PT…", heart_rate.average, training_load).
+export function workoutFrom(o) {
+  const start = get(o, 'startTime', 'start_time', 'exercises.0.startTime');
+  if (!day(String(start ?? ''))) return null;
+  const stop = get(o, 'stopTime', 'exercises.0.stopTime');
+  let durationS = num(get(o, 'durationMillis', 'exercises.0.durationMillis'));
+  durationS = durationS != null ? durationS / 1000 : seconds(get(o, 'duration', 'exercises.0.duration'));
+  if (durationS == null && stop) durationS = (Date.parse(stop) - Date.parse(start)) / 1000 || null;
+  const hrStat = (get(o, 'exercises.0.statistics.statistics') ?? []).find?.((x) => x?.type === 'STATISTICS_TYPE_HEART_RATE');
+  const cardio = num(get(o, 'trainingLoadReport.cardioLoad', 'exercises.0.trainingLoadReport.cardioLoad', 'exercises.0.loadInformation.cardioLoad',
+    'training_load_pro.cardio-load', 'training_load', 'trainingLoad'));
   return {
-    id: `polar:w:${get(o, 'id', 'identifier.id', 'exercises.0.id') ?? idHint ?? start}`,
+    id: `polar:w:${get(o, 'identifier.id', 'id', 'exercises.0.identifier.id') ?? start}`,
     start: String(start).slice(0, 19),
-    sport: prettySport(typeof sport === 'object' ? get(sport, 'name', 'id') : sport),
-    durationS,
-    distanceM: num(get(o, 'distance', 'distanceMeters', 'exercises.0.distance', 'exercises.0.distanceMeters')),
-    hrAvg: num(get(o, 'heart_rate.average', 'heartRate.avg', 'heartRate.average', 'averageHeartRate', 'exercises.0.heartRate.avg', 'exercises.0.heartRate.average', 'hrAvg')),
-    hrMax: num(get(o, 'heart_rate.maximum', 'heartRate.max', 'heartRate.maximum', 'maximumHeartRate', 'exercises.0.heartRate.max', 'exercises.0.heartRate.maximum', 'hrMax')),
-    kcal: num(get(o, 'calories', 'kiloCalories', 'exercises.0.kiloCalories', 'exercises.0.calories')),
-    load: num(get(o, 'training_load', 'trainingLoad', 'cardioLoad', 'loadInformation.cardioLoad.value', 'exercises.0.loadInformation.cardioLoad.value', 'exercises.0.trainingLoad')),
+    sport: sportName(o),
+    durationS: durationS != null ? Math.round(durationS) : null,
+    distanceM: num(get(o, 'distanceMeters', 'distance', 'exercises.0.distanceMeters', 'exercises.0.distance')),
+    hrAvg: num(get(o, 'hrAvg', 'heart_rate.average', 'averageHeartRate', 'exercises.0.hrAvg', 'exercises.0.heartRate.avg')) ?? num(hrStat?.avg),
+    hrMax: num(get(o, 'hrMax', 'heart_rate.maximum', 'maximumHeartRate', 'exercises.0.hrMax', 'exercises.0.heartRate.max')) ?? num(hrStat?.max),
+    kcal: num(get(o, 'calories', 'kiloCalories', 'exercises.0.calories', 'exercises.0.kiloCalories')),
+    load: cardio != null && cardio >= 0 ? round1(cardio) : null,
     source: 'polar',
   };
 }
 
-function nightlyFrom(o) {
-  const date = day(get(o, 'date', 'night', 'sleepResultDate', 'created'));
+// ---- daily activity -----------------------------------------------------------------------
+
+const ACTIVE_LEVELS = /MODERATE|VIGOROUS|LIGHT/i;
+export function activityFrom(o) {
+  const date = day(get(o, 'date'));
+  let steps = num(get(o, 'summary.stepCount', 'steps', 'active_steps'));
+  if (steps == null) {
+    const samples = get(o, 'samples.steps');
+    if (Array.isArray(samples) && samples.length) steps = samples.reduce((a, x) => a + (num(x?.value) ?? 0), 0);
+  }
+  let activeMin = null;
+  const levels = get(o, 'summary.activityLevels');
+  if (Array.isArray(levels)) {
+    activeMin = levels.filter((l) => ACTIVE_LEVELS.test(l?.level ?? '')).reduce((a, l) => a + (seconds(l.duration) ?? 0), 0) / 60;
+  } else if (get(o, 'active_duration') != null) activeMin = seconds(get(o, 'active_duration')) / 60;
   return [
-    measure('night_hr', date, num(get(o, 'heart_rate_avg', 'heartRateAvg', 'meanNightlyRecoveryHeartRate', 'heartRate.avg'))),
-    measure('hrv', date, num(get(o, 'heart_rate_variability_avg', 'heartRateVariabilityAvg', 'meanNightlyRecoveryRmssd', 'meanNightlyRecoveryRMSSD', 'rmssd'))),
-    measure('breathing', date, num(get(o, 'breathing_rate_avg', 'breathingRateAvg', 'meanNightlyRecoveryRespirationInterval'))),
-    measure('ans', date, num(get(o, 'ans_charge', 'ansCharge', 'ansRate'))),
+    measure('steps', date, steps),
+    measure('active_min', date, activeMin != null ? Math.round(activeMin) : null),
+    measure('kcal', date, num(get(o, 'summary.calories', 'calories'))),
   ].filter(Boolean);
 }
 
-function sleepFrom(o) {
-  const date = day(get(o, 'date', 'night', 'sleepDate', 'sleep_end_time', 'sleepEndTime'));
+// ---- sleep and Nightly Recharge -------------------------------------------------------------
+
+// sleep_result_*.json (export) or AccessLink /v3/users/sleep nights.
+export function sleepFrom(o) {
+  const date = day(get(o, 'night', 'date'));
   let min = null;
-  const light = seconds(get(o, 'light_sleep', 'lightSleep'), { msIfNumber: false });
-  const deep = seconds(get(o, 'deep_sleep', 'deepSleep'), { msIfNumber: false });
-  const rem = seconds(get(o, 'rem_sleep', 'remSleep'), { msIfNumber: false });
-  if (light != null && deep != null && rem != null) min = (light + deep + rem) / 60;
-  const total = get(o, 'totalSleepDuration', 'sleepDuration', 'sleep_duration', 'asleepDuration');
-  if (min == null && total != null) min = seconds(total) / 60;
+  const asleep = seconds(get(o, 'evaluation.asleepDuration'));
+  if (asleep) min = asleep / 60;
   if (min == null) {
-    const st = Date.parse(get(o, 'sleep_start_time', 'sleepStartTime', 'sleepStart'));
-    const en = Date.parse(get(o, 'sleep_end_time', 'sleepEndTime', 'sleepEnd'));
+    const parts = ['light_sleep', 'deep_sleep', 'rem_sleep'].map((k) => num(get(o, k)));
+    if (parts.every((x) => x != null)) min = parts.reduce((a, b) => a + b, 0) / 60;
+  }
+  if (min == null) {
+    const st = Date.parse(get(o, 'sleepResult.hypnogram.sleepStart', 'sleep_start_time'));
+    const en = Date.parse(get(o, 'sleepResult.hypnogram.sleepEnd', 'sleep_end_time'));
     if (st && en && en > st) min = (en - st) / 60000;
   }
   return [
     measure('sleep_min', date, min != null ? Math.round(min) : null),
-    measure('sleep_score', date, num(get(o, 'sleep_score', 'sleepScore', 'sleepScore.value'))),
+    measure('sleep_score', date, num(get(o, 'sleep_score'))),
   ].filter(Boolean);
 }
 
-function activityFrom(o) {
-  const date = day(get(o, 'date', 'day', 'created'));
+// sleep_score_*.json
+export function sleepScoreFrom(o) {
+  return [measure('sleep_score', day(get(o, 'night')), num(get(o, 'sleepScoreResult.sleepScore')))].filter(Boolean);
+}
+
+// nightly_recovery_*.json (intervals in ms) or AccessLink /v3/users/nightly-recharge.
+export function nightlyFrom(o) {
+  const date = day(get(o, 'night', 'date'));
+  const rri = num(get(o, 'meanNightlyRecoveryRri'));
+  const resp = num(get(o, 'meanNightlyRecoveryRespirationInterval'));
   return [
-    measure('steps', date, num(get(o, 'active_steps', 'steps', 'activeSteps', 'summary.steps', 'stepCount'))),
-    measure('active_min', date, (() => { const s = seconds(get(o, 'active_duration', 'activeDuration', 'summary.activeDuration')); return s != null ? Math.round(s / 60) : null; })()),
-    measure('kcal', date, num(get(o, 'calories', 'kiloCalories', 'summary.calories'))),
+    measure('night_hr', date, round1(num(get(o, 'heart_rate_avg')) ?? (rri ? 60000 / rri : null))),
+    measure('hrv', date, round1(num(get(o, 'meanNightlyRecoveryRmssd', 'heart_rate_variability_avg')))),
+    measure('breathing', date, round1(num(get(o, 'breathing_rate_avg')) ?? (resp ? 60000 / resp : null))),
+    measure('ans', date, round1(num(get(o, 'ansStatus', 'ans_charge')))),
   ].filter(Boolean);
 }
 
-// Classifies one JSON document (by file name first, then by its keys).
-export function parseJson(name, data) {
-  const n = name.toLowerCase();
-  const list = Array.isArray(data) ? data : [data];
-  const out = { measures: [], workouts: [] };
-  for (const o of list) {
-    if (!o || typeof o !== 'object') continue;
-    if (Array.isArray(o.nights) || Array.isArray(o.recharges)) { const r = parseJson(name, o.nights ?? o.recharges); merge(out, r); continue; }
-    if (Array.isArray(o.exercises) && !o.startTime && !o.start_time) { merge(out, parseJson('training', o.exercises)); continue; }
-    if (/training|exercise|session/.test(n) || o.exercises || o.sport || o.detailed_sport_info) {
-      const w = workoutFrom(o, n);
-      if (w) { out.workouts.push(w); continue; }
-    }
-    if (/recharge|recovery|nightly/.test(n) || get(o, 'ans_charge', 'heart_rate_variability_avg', 'meanNightlyRecoveryRmssd') != null) { out.measures.push(...nightlyFrom(o)); continue; }
-    if (/sleep/.test(n) || get(o, 'sleep_start_time', 'light_sleep', 'sleepStartTime') != null) { out.measures.push(...sleepFrom(o)); continue; }
-    if (/activity|daily/.test(n) || get(o, 'active_steps', 'steps') != null) { out.measures.push(...activityFrom(o)); continue; }
+// 247ohr_*.json: continuous heart rate per day. Polar stores no resting value, so
+// the app keeps a robust daily low (5th percentile of the day's samples).
+export function lowHrFrom(o) {
+  const out = [];
+  for (const d of get(o, 'deviceDays') ?? []) {
+    const hrs = (d?.samples ?? []).map((x) => num(x?.heartRate)).filter((v) => v != null && v > 25).sort((a, b) => a - b);
+    if (hrs.length >= 50) out.push(measure('low_hr', day(d.date), hrs[Math.floor(hrs.length * 0.05)]));
   }
-  return out;
+  return out.filter(Boolean);
 }
 
+// ---- dispatch ---------------------------------------------------------------------------------
+
+const empty = () => ({ measures: [], workouts: [] });
 function merge(a, b) {
   a.measures.push(...b.measures);
   a.workouts.push(...b.workouts);
 }
 
-// Polar Flow single-session CSV: a summary header row + values row, then samples.
+// Classifies one JSON document by file name, then by its keys.
+export function parseJson(name, data) {
+  const n = name.split('/').pop().toLowerCase();
+  const out = empty();
+  if (/^training-target|^calendar|^account|^products|^sport-profiles|^favourite|nightly_recovery_blob|^ppi/.test(n)) return out;
+  const list = Array.isArray(data) ? data : [data];
+  for (const o of list) {
+    if (!o || typeof o !== 'object') continue;
+    if (Array.isArray(o.recharges)) { merge(out, parseJson('nightly_recovery', o.recharges)); continue; }
+    if (Array.isArray(o.nights)) { merge(out, parseJson('sleep_result', o.nights)); continue; }
+    if (Array.isArray(o.exercises) && !get(o, 'startTime', 'start_time')) { merge(out, parseJson('training-session', o.exercises)); continue; }
+    if (/^247ohr/.test(n) || Array.isArray(o.deviceDays)) { out.measures.push(...lowHrFrom(o)); continue; }
+    if (/^nightly_recovery|recharge/.test(n) || get(o, 'meanNightlyRecoveryRmssd', 'ans_charge', 'heart_rate_variability_avg') != null) { out.measures.push(...nightlyFrom(o)); continue; }
+    if (/^sleep_score/.test(n) || o.sleepScoreResult) { out.measures.push(...sleepScoreFrom(o)); continue; }
+    if (/^sleep/.test(n) || o.evaluation || o.sleepResult || get(o, 'light_sleep') != null) { out.measures.push(...sleepFrom(o)); continue; }
+    if (/^activity/.test(n) || o.summary?.stepCount != null || get(o, 'active_steps') != null) { out.measures.push(...activityFrom(o)); continue; }
+    if (/^training-session|exercise/.test(n) || o.exercises || get(o, 'startTime', 'start_time') != null) {
+      const w = workoutFrom(o);
+      if (w) out.workouts.push(w);
+    }
+  }
+  return out;
+}
+
+// Polar Flow single-session CSV: summary header + values row, then samples.
+// The date format follows the account's locale (17-09-2024, 04/04/2018, 09/18/2019).
+export function parseCsvDate(s) {
+  let m = s.match(/^(\d{4})-(\d\d)-(\d\d)$/);
+  if (m) return s;
+  m = s.match(/^(\d\d)[-./](\d\d)[-./](\d{4})$/);
+  if (!m) return null;
+  let [, a, b, y] = m;
+  // Ambiguous slashes default to day first (European locales); "09/18" can only be month first.
+  if (s.includes('/') && Number(b) > 12) [a, b] = [b, a];
+  return `${y}-${b}-${a}`;
+}
+
 export function parseCsv(name, text) {
   const lines = text.split(/\r?\n/);
-  if (lines.length < 2) return { measures: [], workouts: [] };
+  if (lines.length < 2 || !/^Name,Sport,Date/i.test(lines[0])) return empty();
   const head = lines[0].split(',');
   const vals = lines[1].split(',');
-  const col = (re) => { const i = head.findIndex((h) => re.test(h)); return i >= 0 ? vals[i] : undefined; };
-  const date = col(/^date$/i);
-  const time = col(/^start time$/i);
-  if (!date) return { measures: [], workouts: [] };
-  const iso = /^\d{2}-\d{2}-\d{4}$/.test(date) ? `${date.slice(6)}-${date.slice(3, 5)}-${date.slice(0, 2)}` : date;
-  const w = {
-    id: `polar:w:${iso}T${time ?? ''}`,
-    start: `${iso}T${time ?? '00:00:00'}`,
-    sport: prettySport(col(/^sport$/i)),
+  const col = (re) => { const i = head.findIndex((x) => re.test(x.trim())); return i >= 0 ? vals[i]?.trim() : undefined; };
+  const date = parseCsvDate(col(/^date$/i) ?? '');
+  if (!date) return empty();
+  const time = col(/^start time$/i) || '00:00:00';
+  const km = num(col(/^total distance \(km\)$/i));
+  return { measures: [], workouts: [{
+    id: `polar:w:${date}T${time}`,
+    start: `${date}T${time}`,
+    sport: pretty(col(/^sport$/i) || 'Workout'),
     durationS: seconds(col(/^duration$/i)),
-    distanceM: num(col(/^total distance \(km\)$/i)) != null ? num(col(/^total distance \(km\)$/i)) * 1000 : null,
+    distanceM: km != null ? Math.round(km * 1000) : null,
     hrAvg: num(col(/^average heart rate/i)),
-    hrMax: num(col(/^max(imum)? heart rate/i)),
-    kcal: num(col(/^calories/i)),
-    load: num(col(/^training load/i)),
+    hrMax: null,
+    kcal: num(col(/^calories$/i)),
+    load: num(col(/^training load$/i)),
     source: 'polar',
-  };
-  return { measures: [], workouts: [w] };
+  }] };
 }
 
 // Imports any mix of ZIP, JSON and CSV files. Skips per-second sample files.
@@ -169,7 +247,8 @@ export async function importFiles(files, progress = () => {}) {
   };
   for (const f of files) {
     if (/\.zip$/i.test(f.name) || f.type === 'application/zip') {
-      const entries = (await listZip(f)).filter((e) => /\.(json|csv)$/i.test(e.name) && !/(^|\/)(ppi|247ohr|samples)/i.test(e.name));
+      // PPI samples are large and not used; everything else is looked at.
+      const entries = (await listZip(f)).filter((e) => /\.(json|csv)$/i.test(e.name) && !/(^|\/)ppi_samples/i.test(e.name));
       let i = 0;
       for (const e of entries) {
         if (++i % 25 === 0) progress(`Reading ${i} of ${entries.length} files…`);

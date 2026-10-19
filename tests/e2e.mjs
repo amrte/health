@@ -150,6 +150,21 @@ const sub = await page.locator('.page-head .sub').textContent();
 assert.ok(sub.includes(`${counts.reports} reports · ${counts.obs} results`), sub);
 assert.ok(sub.includes(`${counts.vaccines} vaccinations`), sub);
 
+step('Polar export import');
+const { execFileSync } = await import('node:child_process');
+const { mkdtempSync, writeFileSync } = await import('node:fs');
+const { tmpdir } = await import('node:os');
+const zdir = mkdtempSync(tmpdir() + '/polar-e2e-');
+writeFileSync(zdir + '/training-session-2026-10-10T07:00:00-1-a.json', JSON.stringify({ identifier: { id: 'e2e1' }, startTime: '2026-10-10T07:00:00', name: 'Rowing', durationMillis: 3000000, hrAvg: 140, calories: 600 }));
+writeFileSync(zdir + '/nightly_recovery_1-b.json', JSON.stringify([{ night: '2026-10-11', meanNightlyRecoveryRmssd: 61, meanNightlyRecoveryRri: 1200 }]));
+execFileSync('zip', ['-q', zdir + '/export.zip', 'training-session-2026-10-10T07:00:00-1-a.json', 'nightly_recovery_1-b.json'], { cwd: zdir });
+await page.goto(base + '#/fitness');
+await page.locator('#polar-in').setInputFiles(zdir + '/export.zip');
+await page.getByText('Polar data imported').waitFor();
+await page.locator('.tiles').waitFor();
+assert.ok(await page.getByText('Rowing').first().isVisible());
+await shot('08-fitness');
+
 step('dark mode');
 await page.emulateMedia({ colorScheme: 'dark' });
 await page.goto(base + '#/test/ldl');
