@@ -182,7 +182,7 @@ export async function viewData(root) {
   const storageInfo = h('p', { class: 'muted' }, 'Checking storage…');
   const persistBtn = h('button', { class: 'btn', type: 'button', hidden: true, onclick: async () => {
     const ok = await navigator.storage?.persist?.();
-    toast(ok ? 'Storage marked as permanent' : 'The browser declined. Adding the app to the Home Screen helps.');
+    toast(ok ? 'Storage marked as permanent' : 'The browser declined — see the steps below, then try again.');
     refreshStorage();
   } }, 'Keep data permanently');
   async function refreshStorage() {
@@ -193,7 +193,20 @@ export async function viewData(root) {
       (persisted ? ' · storage is permanent' : ' · the browser may clear storage it considers unused');
     persistBtn.hidden = !!persisted || !navigator.storage?.persist;
   }
-  root.append(h('section', { class: 'card' }, h('h2', null, 'Storage'), storageInfo, persistBtn));
+  // Browsers decide this themselves: Chrome and Edge grant it to installed or
+  // bookmarked sites, Firefox asks, Safari keeps data of Home Screen / Dock apps.
+  const ua = navigator.userAgent;
+  const chromium = /Chrome|Chromium|Edg\//.test(ua) && !/CriOS|FxiOS/.test(ua);
+  const ios = /iPhone|iPad/.test(ua) || (navigator.maxTouchPoints > 1 && /Mac/.test(ua));
+  const howTo = ios
+    ? 'On iPhone, open the app from the Home Screen icon (Share → Add to Home Screen in Safari). Safari then keeps its data; in a normal Safari tab, data of sites you don’t open for a week can be deleted.'
+    : chromium
+      ? 'Chrome keeps data permanently for sites you install or bookmark: click the install icon at the right of the address bar (or ⋮ → Cast, save and share → Install page as app), or bookmark this page — then press the button again.'
+      : /Safari/.test(ua) && !/Chrome/.test(ua)
+        ? 'In Safari on a Mac, use File → Add to Dock and open the app from the Dock.'
+        : 'Firefox asks you when you press the button — choose Allow.';
+  root.append(h('section', { class: 'card' }, h('h2', null, 'Storage'), storageInfo, persistBtn,
+    h('p', { class: 'hint' }, howTo, ' Either way, export a backup now and then — it is your copy if the browser or the device is reset.')));
   refreshStorage();
 
   root.append(h('section', { class: 'card' },
