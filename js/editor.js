@@ -7,7 +7,7 @@
 import { h, go, toast, uid } from './dom.js';
 import { METRICS, CATEGORIES, getMetric, matchMetric, customKey } from './metrics.js';
 import { canConvert, convert } from './units.js';
-import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME, isDocType } from './parse.js';
+import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME, isDocType, textStatus } from './parse.js';
 import { state, saveReport, statusOf } from './store.js';
 import { fmtNum, fmtRange, todayIso, fmtDate } from './format.js';
 import { pageHead, statusChip, thumb, openFile } from './ui.js';
@@ -81,8 +81,9 @@ function rowPreview(row, reportDate) {
   } else {
     out.push(h('span', null, `Text result “${pv.text}”`));
   }
-  if (row.refRaw.trim() && rg.low == null && rg.high == null) out.push(h('span', { class: 'warn' }, ' · reference range not understood'));
-  const st = statusOf(pv.value, rg.low, rg.high, row.flag || pv.flag);
+  const ts = pv.value == null ? textStatus(row.valueRaw, row.refRaw) : null;
+  if (row.refRaw.trim() && rg.low == null && rg.high == null && !ts) out.push(h('span', { class: 'warn' }, ' · reference not understood'));
+  const st = ts ?? statusOf(pv.value, rg.low, rg.high, row.flag || pv.flag);
   if (st !== 'none') out.push(' · ', statusChip(st));
   if (row.date && row.date !== reportDate) out.push(h('span', null, ` · dated ${fmtDate(row.date)}`));
   return h('div', { class: 'preview' }, out);
@@ -139,7 +140,7 @@ export async function viewEditor(root, id, presetType) {
       copyBtn.textContent = 'Copy instructions';
       touch();
     } }, REPORT_TYPES.map(([k, n]) => h('option', { value: k }, n)))),
-    h('label', null, h('span', null, report.type === 'lab' ? 'Sample date' : 'Date'), dateIn),
+    h('label', null, h('span', null, report.type === 'lab' ? 'Sample date — used for all results below' : 'Date — used for all values below'), dateIn),
     h('label', null, h('span', null, 'Lab, clinic or hospital'), labIn, h('datalist', { id: 'labs' }, labs.map((l) => h('option', { value: l })))),
     docBox,
     h('label', null, h('span', null, 'Note'), h('textarea', { rows: 2, value: report.note, placeholder: 'Optional: why it was done, how you felt…', oninput: (e) => { report.note = e.target.value; touch(); } }))));
@@ -255,6 +256,19 @@ export async function viewEditor(root, id, presetType) {
         touch();
         renderRows();
       });
+      // Rows use the report's date; a row only gets its own date when it differs
+      // (e.g. a screenshot listing several dates).
+      function rowDate() {
+        const box = h('div', { class: 'f-date' });
+        const show = (open) => box.replaceChildren(open
+          ? h('label', null, h('span', null, 'Date of this result'), h('div', { class: 'date-own' },
+            h('input', { type: 'date', value: row.date || report.date, oninput: (e) => { row.date = e.target.value === report.date ? '' : e.target.value; touch(); refresh(); } }),
+            h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Use the report date', title: 'Use the report date', onclick: () => { row.date = ''; touch(); refresh(); show(false); } }, '×')))
+          : h('div', null, h('span', { class: 'f-label' }, 'Date'), h('button', { class: 'btn small link-btn', type: 'button', onclick: () => show(true) },
+            report.date ? `${fmtDate(report.date)} (report date) · change` : 'Report date · change')));
+        show(!!row.date && row.date !== report.date);
+        return box;
+      }
       const unknown = !row.metric || row.metric.startsWith('custom:');
       const card = h('div', { class: 'row-edit' + (unknown ? ' unknown' : '') },
         h('div', { class: 'row-edit-head' }, sel,
@@ -265,8 +279,7 @@ export async function viewEditor(root, id, presetType) {
           field('refRaw', 'Reference', { placeholder: 'e.g. 3.5–5.0' })),
         h('div', { class: 'row-edit-grid two' },
           field('name', 'Printed name'),
-          h('label', { class: 'f-date' }, h('span', null, 'Own date'), h('input', { type: 'date', value: row.date,
-            oninput: (e) => { row.date = e.target.value; touch(); refresh(); } }))),
+          rowDate()),
         preview);
       refresh();
       return card;

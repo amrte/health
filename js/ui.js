@@ -8,6 +8,7 @@ const STATUS = {
   high: ['▲', 'High'],
   low: ['▼', 'Low'],
   normal: ['✓', 'In range'],
+  abnormal: ['◆', 'Not as expected'],
 };
 
 export function statusLabel(status) {

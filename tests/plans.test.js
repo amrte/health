@@ -217,3 +217,30 @@ test('lab reports: urine rows, qualitative values, several formulas, two units',
   assert.ok(evaluate(by, {}, Date.parse('2026-10-19')).some((f) => f.title === 'eGFR 76: category G2 (mildly decreased)'));
   assert.ok(!evaluate(data([['egfr', '2026-03-02', 95]]), {}, Date.parse('2026-10-19')).some((f) => /G2/.test(f.title)));
 });
+
+test('qualitative results, and tidying results saved earlier', async () => {
+  const { qualitative, textStatus, tidyStored } = await import('../js/parse.js');
+  const { demoData } = await import('../js/demo.js');
+  assert.deepEqual(['negativ', 'Negative', 'neg.', '+++', 'Spuren', 'nicht nachweisbar', 'не виявлено', '5,3'].map(qualitative), ['neg', 'neg', 'neg', 'pos', 'trace', 'neg', 'neg', null]);
+  assert.equal(textStatus('negativ', 'negativ'), 'normal');
+  assert.equal(textStatus('positiv', 'negativ'), 'abnormal');
+  assert.equal(textStatus('Spuren', 'negativ'), 'abnormal');
+  assert.equal(textStatus('6,1', '3,5 - 9,8'), null);
+  const p = point({ id: 'u', reportId: 'r', date: '2026-03-02', metric: 'custom:nitrit-urin', name: 'Nitrit (Urin)', valueRaw: 'positiv', unit: '', refRaw: 'negativ', flag: '' }, null);
+  assert.equal(p.status, 'abnormal');
+  const { obs } = demoData();
+  assert.deepEqual(tidyStored(obs), { put: [], del: [] }, 'nothing to change in clean data');
+  const saved = [
+    { id: '1', reportId: 'r', date: '2026-03-02', metric: 'hb', name: 'Hämoglobin (Urin)', valueRaw: 'negativ', unit: '', refRaw: 'negativ' },
+    { id: '2', reportId: 'r', date: '2026-03-02', metric: 'hb', name: 'Hämoglobin', valueRaw: '15,4', unit: 'g/dL', refRaw: '' },
+    { id: '3', reportId: 'r', date: '2026-03-02', metric: 'egfr', name: 'GFR nach der Mayo-Klinik-Formel', valueRaw: '95', unit: 'ml/min' },
+    { id: '4', reportId: 'r', date: '2026-03-02', metric: 'egfr', name: 'GFR nach der CKD-EPI-Formel', valueRaw: '76', unit: 'ml/min' },
+    { id: '5', reportId: 'r', date: '2026-03-02', metric: 'hba1c', name: 'HbA1c', valueRaw: '5,4', unit: '%' },
+    { id: '6', reportId: 'r', date: '2026-03-02', metric: 'hba1c', name: 'HbA1c', valueRaw: '35,5', unit: 'mmol/mol Hb' },
+    { id: '7', reportId: 'r', date: '2026-03-02', metric: 'wbc', name: 'Leukozyten', valueRaw: 'negativ', unit: '' },
+  ];
+  const fix = tidyStored(saved);
+  assert.deepEqual(fix.put.map((o) => [o.id, o.metric]).sort(), [['1', 'custom:hamoglobin-urin'], ['3', 'custom:gfr-nach-der-mayo-klinik-formel'], ['7', 'custom:leukozyten']]);
+  assert.deepEqual(fix.del, ['5']);
+  assert.deepEqual(tidyStored(saved.filter((o) => o.id !== '5').map((o) => fix.put.find((x) => x.id === o.id) ?? o)), { put: [], del: [] }, 'running it again changes nothing');
+});

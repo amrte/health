@@ -42,7 +42,7 @@ export function summaryTests(byMetric, { mode = 'key', years = 2, today = todayI
   return [...byMetric.values()]
     // Heart-test and body-composition details stay on their pages; the main ones are kept.
     .filter((e) => e.last.t >= since && (e.m.cat !== 'cardio' || e.m.key === 'ntprobnp') && (e.m.cat !== 'body' || BODY_MAIN.includes(e.m.key)))
-    .filter((e) => mode === 'all' || KEY_TESTS.includes(e.m.key) || e.last.status === 'high' || e.last.status === 'low')
+    .filter((e) => mode === 'all' || KEY_TESTS.includes(e.m.key) || e.last.status === 'high' || e.last.status === 'low' || e.last.status === 'abnormal')
     // Measured or calculated BMI / eGFR: only the newer one.
     .filter((e) => {
       const twin = { bmi: 'bmi_calc', bmi_calc: 'bmi', egfr: 'egfr_calc', egfr_calc: 'egfr' }[e.m.key];
@@ -123,9 +123,9 @@ function sheet() {
     h('section', { class: 'ps-sec ps-results' }, h('h3', null, `Results${opts.mode === 'key' ? ' — main tests and anything out of range, last 2 years' : ' — last 2 years'}`), tests.length
       ? h('table', { class: 'ps-table' },
         h('thead', null, h('tr', null, h('th', null, 'Test'), h('th', null, 'Latest'), h('th', null, 'Reference'), h('th', null, 'Trend'), h('th', null, 'Earlier'))),
-        h('tbody', null, tests.map(({ e, last, prev, trend, pts }) => h('tr', { class: last.status === 'high' || last.status === 'low' ? 'ps-out' : null },
+        h('tbody', null, tests.map(({ e, last, prev, trend, pts }) => h('tr', { class: ['high', 'low', 'abnormal'].includes(last.status) ? 'ps-out' : null },
           h('td', null, e.m.name),
-          h('td', { class: 'ps-latest' }, h('strong', null, val(last, e.m.unit)), last.status === 'high' || last.status === 'low' ? ` ${statusLabel(last.status)}` : '', h('span', { class: 'ps-dim' }, ` · ${short(last.o.date)}`)),
+          h('td', { class: 'ps-latest' }, h('strong', null, val(last, e.m.unit)), ['high', 'low', 'abnormal'].includes(last.status) ? ` ${statusLabel(last.status)}` : '', h('span', { class: 'ps-dim' }, ` · ${short(last.o.date)}`)),
           h('td', { class: 'ps-dim' }, last.lo != null || last.hi != null ? fmtRange(last.lo, last.hi) : last.o.refRaw || '—'),
           h('td', { class: 'ps-trend' }, pts.length > 1 ? sparkline(pts) : null, trend ? h('span', null, ` ${trend}`) : null),
           h('td', { class: 'ps-dim' }, prev.slice(0, 2).map((q) => `${fmtNum(+q.v.toFixed(2))} (${short(q.o.date)})`).join(', ') || '—')))))

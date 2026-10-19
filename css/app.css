@@ -174,7 +174,7 @@ p { margin: 0 0 10px; }
 
 .status { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
 .status-icon { font-size: 11px; }
-.st-high .status-icon, .st-low .status-icon { color: var(--critical); }
+.st-high .status-icon, .st-low .status-icon, .st-abnormal .status-icon { color: var(--critical); }
 .st-normal .status-icon { color: var(--good); }
 .st-none { color: var(--muted); }
 
@@ -748,3 +748,10 @@ mark { background: var(--accent-soft); }
 .ps-results { break-inside: auto; }
 .ps-table tr { break-inside: avoid; }
 @media print { .ps-table td, .ps-table th { padding: 1.5px 6px 1.5px 0; } .ps-sec { margin-bottom: 7px; } .ps-dim { font-size: 8.5pt; } }
+
+/* Result rows: the date follows the report unless a row has its own */
+.f-date .f-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.f-date .link-btn { width: 100%; text-align: left; font-weight: 400; background: transparent; border: 1px dashed var(--axis); color: var(--ink-2); box-shadow: none; padding: 9px 12px; font-size: 15px; }
+.f-date .link-btn:hover { border-color: var(--accent); }
+.date-own { display: flex; gap: 6px; align-items: center; }
+.date-own input { flex: 1; min-width: 0; }

@@ -53,6 +53,27 @@ export function parseRange(raw) {
   return { low: null, high: null };
 }
 
+// Qualitative results and references ("negativ", "positive", "+", "Spuren"…).
+const QUAL = [
+  ['neg', /^(negativ|negative|neg|negatiivinen|negat|nicht nachweisbar|not detected|kein|keine|ei todettu|негативн\S*|не виявлено|не обнаружено|отсутств\S*|відсутн\S*|-)$/i],
+  ['trace', /^(spuren|trace|traces|jälkiä|сліди|следы|\(\+\)|\+-|±)$/i],
+  ['pos', /^(positiv|positive|pos|positiivinen|nachweisbar|detected|позитивн\S*|виявлено|обнаружено|\++)$/i],
+  ['normal', /^(normal|normaali|norm|норма|в нормі|в норме|unauffällig)$/i],
+];
+export function qualitative(s) {
+  const t = String(s ?? '').trim().replace(/[.]$/, '');
+  return QUAL.find(([, re]) => re.test(t))?.[0] ?? null;
+}
+
+// Status of a text result against a text reference: 'normal' when they match
+// ("negativ" vs "negativ"), 'abnormal' otherwise; null if either isn't qualitative.
+export function textStatus(valueRaw, refRaw) {
+  const v = qualitative(valueRaw);
+  const r = qualitative(refRaw);
+  if (!v || !r) return null;
+  return v === r ? 'normal' : 'abnormal';
+}
+
 export function isoDate(s) {
   const t = String(s ?? '').trim();
   let m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
@@ -188,6 +209,31 @@ function oneValuePerDay(rows, docDate) {
     }
   }
   return rows.filter((_, i) => !drop.has(i));
+}
+
+// The same rules for results saved earlier: returns the results whose test changes
+// and those to remove (the same value again in another unit).
+export function tidyStored(obs) {
+  const byReport = new Map();
+  for (const o of obs) {
+    if (o.metric?.startsWith('custom:') || o.metric?.startsWith('calc:')) continue;
+    if (!byReport.has(o.reportId)) byReport.set(o.reportId, []);
+    byReport.get(o.reportId).push({ ...o });
+  }
+  const before = new Map(obs.map((o) => [o.id, o.metric]));
+  const put = [];
+  const del = [];
+  for (const list of byReport.values()) {
+    for (const r of list) {
+      if (getMetric(r.metric) && (isUrineName(r.name) || (parseValue(r.valueRaw).value == null && QUALITATIVE.test(r.valueRaw)))) r.metric = customKey(r.name);
+    }
+    const kept = new Set(oneValuePerDay(list, '').map((r) => r.id));
+    for (const r of list) {
+      if (!kept.has(r.id)) del.push(r.id);
+      else if (r.metric !== before.get(r.id)) put.push(r);
+    }
+  }
+  return { put, del };
 }
 
 const strList = (x) => (Array.isArray(x) ? x : x ? [x] : []).map((s) => String(s).trim()).filter(Boolean);

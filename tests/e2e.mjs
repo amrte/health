@@ -98,15 +98,23 @@ const reply = '```json\n' + JSON.stringify({
     { name: 'Leukozyten', metric: 'wbc', value: '11,2', unit: '/nl', ref: '3,9-10,2', flag: 'H' },
     { name: 'Холестерин ЛПНЩ', metric: null, value: '3,6', unit: 'ммоль/л', ref: '< 3,0' },
     { name: 'Mystery marker', metric: null, value: '12', unit: 'xyz/l', ref: '0-20' },
+    { name: 'Nitrit (Urin)', metric: null, value: 'positiv', unit: '', ref: 'negativ' },
   ],
 }) + '\n```';
 await page.locator('.claude textarea').fill(reply);
 await page.getByRole('button', { name: 'Read results' }).click();
-await page.locator('.row-edit').nth(3).waitFor();
-assert.equal(await page.locator('.row-edit').count(), 4);
-assert.equal(await page.locator('.row-edit.unknown').count(), 1);
+await page.locator('.row-edit').nth(4).waitFor();
+assert.equal(await page.locator('.row-edit').count(), 5);
+assert.equal(await page.locator('.row-edit.unknown').count(), 2);
 assert.equal(await page.locator('.row-edit').nth(2).locator('select').inputValue(), 'ldl');
 assert.equal(await page.locator('input[type=date]').first().inputValue(), '2026-09-30');
+assert.equal(await page.locator('.row-edit input[type=date]').count(), 0, 'rows use the report date');
+const urine = page.locator('.row-edit').nth(4);
+assert.match(await urine.locator('.preview').textContent(), /Not as expected/);
+assert.doesNotMatch(await urine.locator('.preview').textContent(), /not understood/);
+await urine.getByRole('button', { name: /30 Sept? 2026 \(report date\) · change/ }).click();
+assert.equal(await urine.locator('input[type=date]').inputValue(), '2026-09-30');
+await urine.getByRole('button', { name: 'Use the report date' }).click();
 await shot('04-editor');
 await page.getByRole('button', { name: 'Save', exact: true }).click();
 await page.locator('h1', { hasText: '30 Sept 2026' }).or(page.locator('h1', { hasText: '30 Sep 2026' })).waitFor();

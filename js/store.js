@@ -7,7 +7,7 @@
 import * as db from './db.js';
 import { getMetric, normName, CATEGORY_NAME } from './metrics.js';
 import { normUnit, convert } from './units.js';
-import { parseValue, parseRange } from './parse.js';
+import { parseValue, parseRange, textStatus, tidyStored } from './parse.js';
 import { dateMs } from './format.js';
 import { calculatedObs } from './calc.js';
 import { evaluate } from './evaluate.js';
@@ -41,6 +41,12 @@ export async function load() {
     db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile'),
     db.getAll('measures'), db.getAll('workouts'), db.getAll('bp'), db.getAll('genomes'), db.getAll('dental'), db.getAll('meds'), db.getAll('events')]);
   state.profile = profile ?? {};
+  // Results saved before a matching rule was fixed (e.g. urine values on blood tests).
+  const fix = tidyStored(state.obs);
+  if (fix.put.length || fix.del.length) {
+    await db.write({ put: { obs: fix.put }, del: { obs: fix.del } });
+    state.obs = await db.getAll('obs');
+  }
   derive();
 }
 
@@ -82,7 +88,7 @@ export function point(o, m) {
     hi: m ? convert(rg.high, o.unit, m) : null,
     converted: !!m && pv.value != null && normUnit(o.unit) !== m.cu && normUnit(o.unit) !== '',
     unconvertible: pv.value != null && v == null,
-    status: statusOf(pv.value, rg.low, rg.high, o.flag || pv.flag),
+    status: (pv.value == null && textStatus(o.valueRaw, o.refRaw)) || statusOf(pv.value, rg.low, rg.high, o.flag || pv.flag),
   };
 }
 

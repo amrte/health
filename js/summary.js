@@ -4,7 +4,7 @@ import { CATEGORIES } from './metrics.js';
 import { fmtNum, fmtRange } from './format.js';
 import { SOURCES } from './knowledge.js';
 
-const MARK = { high: ' (H)', low: ' (L)' };
+const MARK = { high: ' (H)', low: ' (L)', abnormal: ' (not as expected)' };
 
 function valueOf(p) {
   if (p.text) return p.text;

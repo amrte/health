@@ -141,7 +141,7 @@ export function viewOverview(root) {
         h('div', { class: 'card list' }, follow, reminderRows, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
     }
     const harmless = (e) => (e.last.status === 'high' && e.m.highOk) || (e.last.status === 'low' && e.m.lowOk);
-    const flagged = entries.filter((e) => (e.last.status === 'high' || e.last.status === 'low') && !harmless(e));
+    const flagged = entries.filter((e) => (e.last.status === 'high' || e.last.status === 'low' || e.last.status === 'abnormal') && !harmless(e));
     if (flagged.length && !overviewQuery) {
       out.push(h('section', { class: 'group wide' },
         h('h2', null, 'Out of range at last test'),

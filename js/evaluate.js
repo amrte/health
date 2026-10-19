@@ -67,6 +67,10 @@ export function generalFindings(key, entry, now = Date.now()) {
   const range = (p) => fmtRange(p.lo, p.hi) + (unit ? ` ${unit}` : '');
 
   const source = m.cat === 'body' ? 'device' : 'lab';
+  if (last.status === 'abnormal') {
+    out.push({ keys: [key], level: 'attention', kind: 'range', title: `${m.name}: not as expected`,
+      text: `Result “${last.o.valueRaw}”, the lab expects “${last.o.refRaw}”. Ask the doctor who ordered it what it means for you; a single result can be off, and a repeat test shows whether it persists.`, sources: [] });
+  }
   const harmless = (last.status === 'high' && m.highOk) || (last.status === 'low' && m.lowOk);
   if (harmless) {
     out.push({ keys: [key], level: 'good', kind: 'range', title: `${m.name} ${last.status === 'high' ? 'above' : 'below'} the device’s range`,
