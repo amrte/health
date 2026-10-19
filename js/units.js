@@ -23,6 +23,7 @@ const SYN = {
   'uiu/ml': 'mu/l', 'miu/l': 'mu/l', 'mie/l': 'mu/l', 'uu/ml': 'mu/l', 'uie/ml': 'mu/l', 'mui/l': 'mu/l',
   'kiu/l': 'iu/ml', 'ku/l': 'iu/ml', 'u/ml': 'iu/ml',
   'meq/l': 'mmol/l',
+  'mmol/molhb': 'mmol/mol',
   'mm/std': 'mm/h', 'mm/hr': 'mm/h', 'mm/1h': 'mm/h', 'mm/1.h': 'mm/h', 'mm/1.std': 'mm/h', 'mm/t': 'mm/h',
   'um3': 'fl',
   'g/100ml': 'g/dl', 'mg/100ml': 'mg/dl',

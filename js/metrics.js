@@ -81,7 +81,7 @@ const DEFS = [
   // Lipids
   { key: 'chol', cat: 'lipids', name: 'Total cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
     aliases: ['cholesterol', 'total cholesterol', 'cholesterin', 'gesamtcholesterin', 'cholesterin gesamt', 'kolesteroli', 'kol', 'chol', 'tc', 'холестерин', 'холестерин загальний', 'загальний холестерин', 'общий холестерин', 'холестерин общий'],
-    not: ['ldl', 'hdl', 'лпнщ', 'лпвщ', 'лпднщ', 'лпнп', 'лпвп', 'лпонп', 'non', 'nicht', 'низьк', 'висок', 'низк', 'высок', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош', 'index', 'індекс', 'индекс', 'не лп'] },
+    not: ['remnant', 'rest', 'ldl', 'hdl', 'лпнщ', 'лпвщ', 'лпднщ', 'лпнп', 'лпвп', 'лпонп', 'non', 'nicht', 'низьк', 'висок', 'низк', 'высок', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош', 'index', 'індекс', 'индекс', 'не лп'] },
   { key: 'ldl', cat: 'lipids', name: 'LDL cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
     aliases: ['ldl', 'ldl c', 'ldl cholesterol', 'ldl cholesterin', 'kol ldl', 'ldl kolesteroli', 'лпнщ', 'лпнп', 'холестерин лпнщ', 'холестерин лпнп', 'низької щільності', 'низкой плотности'],
     not: ['vldl', 'лпднщ', 'лпонп', 'дуже', 'очень', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош'] },
@@ -90,6 +90,8 @@ const DEFS = [
     not: ['non', 'nicht', 'ratio', 'quotient', 'verhält', 'співвід', 'соотнош', 'не лп'] },
   { key: 'nonhdl', cat: 'lipids', name: 'Non-HDL cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
     aliases: ['non hdl', 'non hdl c', 'non hdl cholesterol', 'non hdl cholesterin', 'nicht hdl cholesterin', 'kol non hdl', 'холестерин не лпвщ', 'не лпвщ', 'холестерин не лпвп'] },
+  { key: 'remnant', cat: 'lipids', name: 'Remnant cholesterol', unit: 'mmol/L', alt: { 'mg/dl': 0.02586 },
+    aliases: ['remnant cholesterol', 'remnant cholesterin', 'remnant c', 'restcholesterin', 'remnanttikolesteroli', 'залишковий холестерин', 'ремнантний холестерин', 'ремнантный холестерин'] },
   { key: 'trig', cat: 'lipids', name: 'Triglycerides', unit: 'mmol/L', alt: { 'mg/dl': 0.01129 },
     aliases: ['triglycerides', 'triglyceride', 'triglyzeride', 'triglyseridit', 'trigly', 'tg', 'тригліцериди', 'триглицериды'] },
   { key: 'apob', cat: 'lipids', name: 'Apolipoprotein B', unit: 'g/L', alt: { 'mg/dl': 0.01 },
@@ -459,13 +461,21 @@ function pickVariant(key, raw, unit, value) {
   return m.pair + (pct ? '_pct' : '_abs');
 }
 
+// Urine results ("Leukozyten (Urin)", "Urinstatus: Protein", "U-Prot", "Сеча: білок")
+// are not in the catalogue. Whole words only: "Harnsäure" (uric acid) and
+// "сечовина" (urea) are blood tests.
+export function isUrineName(name) {
+  const tokens = normName(name).split(' ');
+  if (tokens.length > 1 && URINE_SPECIMEN.has(tokens[0])) return true;
+  return tokens.some((t) => t.startsWith('urin') || t === 'harn' || t.startsWith('virtsa') || /^(сеч[аіи]|моч[аиі])$/.test(t));
+}
+
 // Returns the catalogue key for a printed test name, or null when unsure.
 export function matchMetric(name, unit = '', value = null) {
   const raw = String(name ?? '');
   const n = normName(raw);
-  if (!n) return null;
+  if (!n || isUrineName(raw)) return null;
   const tokens = n.split(' ');
-  if (tokens.length > 1 && URINE_SPECIMEN.has(tokens[0])) return null;
   // Try the name without a Finnish specimen prefix too ("B-Hb" → "hb"), but
   // keep the full name first so "B 12" still means vitamin B12.
   const forms = [n];

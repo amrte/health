@@ -181,3 +181,39 @@ test('summary for the doctor: tests and diagnoses', async () => {
   const d = diagnosesFrom([{ date: '2025-04-10', diagnoses: ['Palpitations'], specialty: 'Cardiology' }, { date: '2026-05-20', diagnoses: ['Low iron stores', 'palpitations '] }]);
   assert.deepEqual(d.map((x) => [x.text, x.date]), [['Low iron stores', '2026-05-20'], ['palpitations', '2026-05-20']]);
 });
+
+test('lab reports: urine rows, qualitative values, several formulas, two units', async () => {
+  const { parseExtraction, buildPrompt } = await import('../js/parse.js');
+  const { matchMetric, isUrineName } = await import('../js/metrics.js');
+  const { evaluate } = await import('../js/evaluate.js');
+  assert.equal(matchMetric('Hämoglobin (Urin)', ''), null);
+  assert.equal(matchMetric('Protein (Urin)', ''), null);
+  assert.equal(matchMetric('Harnsäure', 'mg/dL'), 'uric', 'Harnsäure is a blood test');
+  assert.equal(matchMetric('Сечовина', 'ммоль/л'), 'urea', 'сечовина is a blood test');
+  assert.equal(isUrineName('Сеча: білок'), true);
+  assert.equal(matchMetric('Remnant-Cholesterin', 'mg/dL'), 'remnant');
+  assert.equal(matchMetric('Cholesterin', 'mg/dL'), 'chol');
+  const res = parseExtraction('```json\n' + JSON.stringify({ date: '2026-03-02', lab: 'Testlabor', results: [
+    { name: 'Leukozyten', metric: 'wbc', value: 'negativ', unit: '', ref: 'negativ' },
+    { name: 'Leukozyten', metric: 'wbc', value: '6,1', unit: 'G/L', ref: '3,5 - 9,8' },
+    { name: 'Hämoglobin (Urin)', metric: 'hb', value: 'negativ', unit: '' },
+    { name: 'GFR nach der MDRD-Kurzformel', metric: 'egfr', value: '>60', unit: 'ml/min/1,73m2KOF' },
+    { name: 'GFR nach der CKD-EPI-Formel', metric: 'egfr', value: '88', unit: 'ml/min/1,73m2 KOF', ref: '80 - 140' },
+    { name: 'HbA1c', metric: 'hba1c', value: '5,2', unit: '%' },
+    { name: 'HbA1c', metric: 'hba1c', value: '33,3', unit: 'mmol/mol Hb' },
+  ] }) + '\n```');
+  const rows = res.rows.map((r) => [r.name, r.metric]);
+  assert.deepEqual(rows, [
+    ['Leukozyten', ''], ['Leukozyten', 'wbc'], ['Hämoglobin (Urin)', ''],
+    ['GFR nach der MDRD-Kurzformel', 'custom:gfr-nach-der-mdrd-kurzformel'], ['GFR nach der CKD-EPI-Formel', 'egfr'],
+    ['HbA1c', 'hba1c'],
+  ], 'urine and "negativ" rows leave the blood keys; CKD-EPI keeps eGFR; HbA1c once, in mmol/mol');
+  assert.equal(res.rows.at(-1).unit, 'mmol/mol Hb');
+  const p = buildPrompt('lab');
+  assert.match(p, /not the doctor who validated/);
+  assert.match(p, /Leukozyten \(Urin\)/);
+  assert.match(p, /only for CKD-EPI/);
+  const by = data([['egfr', '2026-03-02', 76]]);
+  assert.ok(evaluate(by, {}, Date.parse('2026-10-19')).some((f) => f.title === 'eGFR 76: category G2 (mildly decreased)'));
+  assert.ok(!evaluate(data([['egfr', '2026-03-02', 95]]), {}, Date.parse('2026-10-19')).some((f) => /G2/.test(f.title)));
+});

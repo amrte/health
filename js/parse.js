@@ -1,6 +1,7 @@
 // Parsing of values, reference ranges and Claude's extraction replies. Pure functions.
 
-import { METRICS, CATEGORIES, getMetric, matchMetric } from './metrics.js';
+import { METRICS, CATEGORIES, getMetric, matchMetric, isUrineName, customKey } from './metrics.js';
+import { convert, normUnit } from './units.js';
 
 // "5,3" → 5.3, "1.234,5" → 1234.5, "1,234.5" → 1234.5. Returns null if not a number.
 export function parseNumber(s) {
@@ -114,6 +115,10 @@ Rules:
 - Many body composition reports print the previous measurement next to the current one. Use the line "change since the previous measurement" (e.g. "Muutos edelliseen mittaukseen", "Veränderung") to tell which value is current. Give current values with the report date; give a previous value as its own entry only if its date is printed, otherwise leave it out.
 - "ref": the device's normal range for that value, e.g. "62–83.8". The two numbers under a bar are usually its range.
 - For segmental values (arms, trunk, legs) give the mass in kg; leave out the percentages of the reference shown under them. Leave out calorie tables for activities, and goals such as "fat mass target".` : ''}${type === 'holter' ? '\n- For extra beats give both the count (pvc_count, pac_count) and the share of all beats in % (pvc_pct, pac_pct) when shown. If atrial fibrillation is reported, give af_burden in %; if the report says there was none, give 0.' : ''}${doc ? '\n- Don’t interpret beyond the document; keep diagnoses and advice as the doctor wrote them.' : ''}
+- "lab": the laboratory or practice that did the tests — not the doctor who validated or signed the report.${type === 'lab' ? `
+- Urine, stool and other non-blood results: put the specimen in "name", e.g. "Leukozyten (Urin)", and use metric null. A heading such as "Urinstatus" applies to every row under it, also on the following pages.
+- If a test is given by several formulas (e.g. eGFR by MDRD, Mayo and CKD-EPI), use the metric key only for CKD-EPI and null for the others. If a result is printed in two units (e.g. HbA1c in % and mmol/mol), give both rows with the same metric key.
+- If no sample date is printed (e.g. "Abnahmedatum: -"), use the date the lab received the sample.` : ''}
 - Leave out personal data (name, address, insurance number). Don't add anything that is not in the document.
 - "metric": the best matching key from this list, or null if none fits:
 ${list}`;
@@ -146,8 +151,43 @@ export function toRow(r) {
   }
   const pv = parseValue(valueRaw);
   let metric = r.metric && getMetric(r.metric) ? r.metric : matchMetric(name, unit, pv.value);
+  // Catalogue tests are blood values with numbers: a urine row, or "negativ" for a
+  // count, is a different test that only shares the name.
+  if (metric && (isUrineName(name) || (pv.value == null && QUALITATIVE.test(valueRaw)))) metric = null;
   const flag = /^h/i.test(r.flag ?? '') ? 'H' : /^l/i.test(r.flag ?? '') ? 'L' : pv.flag;
   return { name, metric: metric ?? '', valueRaw, unit, refRaw, flag, date: isoDate(r.date) };
+}
+
+const QUALITATIVE = /^(negativ|negative|neg\b|positiv|positive|pos\b|nicht nachweisbar|nachweisbar|spuren|trace|negatiivinen|positiivinen|негатив|позитив|не виявлено|виявлено|не обнаружено|обнаружено|[+]{1,4}$)/i;
+
+// One value per test and day: the same result in a second unit is dropped, and of
+// several formulas (eGFR by MDRD, Mayo, CKD-EPI) the standard one keeps the key —
+// the others become tests of their own under their printed name.
+const PREFERRED = { egfr: /ckd/i };
+function oneValuePerDay(rows, docDate) {
+  const groups = new Map();
+  rows.forEach((r, i) => {
+    if (!r.metric || r.metric.startsWith('custom:')) return;
+    const k = `${r.metric}|${r.date || docDate}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(i);
+  });
+  const drop = new Set();
+  for (const idx of groups.values()) {
+    if (idx.length < 2) continue;
+    const m = getMetric(rows[idx[0]].metric);
+    const v = (i) => convert(parseValue(rows[i].valueRaw).value, rows[i].unit, m);
+    const rank = (i) => (PREFERRED[m.key]?.test(rows[i].name) ? 0 : v(i) == null ? 3 : normUnit(rows[i].unit) === m.cu ? 1 : 2);
+    const keep = [...idx].sort((a, b) => rank(a) - rank(b) || a - b)[0];
+    for (const i of idx) {
+      if (i === keep) continue;
+      const a = v(i);
+      const b = v(keep);
+      if (a != null && b != null && Math.abs(a - b) <= 0.03 * Math.abs(b) && !PREFERRED[m.key]) drop.add(i);
+      else rows[i].metric = customKey(rows[i].name || m.name);
+    }
+  }
+  return rows.filter((_, i) => !drop.has(i));
 }
 
 const strList = (x) => (Array.isArray(x) ? x : x ? [x] : []).map((s) => String(s).trim()).filter(Boolean);
@@ -182,5 +222,5 @@ export function parseExtraction(text) {
       if (row.name || row.metric) rows.push(row);
     }
   }
-  return { date, lab, rows, doc };
+  return { date, lab, rows: oneValuePerDay(rows, date), doc };
 }

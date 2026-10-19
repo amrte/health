@@ -548,7 +548,11 @@ KB.egfr_calc = {
 };
 
 function egfrRule(p, c, key) {
-  if (p.v >= 60) return null;
+  if (p.v >= 90) return null;
+  if (p.v >= 60) {
+    return F('info', `eGFR ${fmtNum(p.v)}: category G2 (mildly decreased)`,
+      `KDIGO calls 60–89 mildly decreased. On its own this is not chronic kidney disease: at this level CKD needs other signs of kidney damage, such as albumin in the urine. Some labs flag values below 80–90 as low.`, ['kdigo2024']);
+  }
   const low = c.series(key).filter((q) => q.v < 60);
   const span = low.length > 1 ? (low[low.length - 1].t - low[0].t) / 864e5 : 0;
   const cat = p.v >= 45 ? 'G3a' : p.v >= 30 ? 'G3b' : p.v >= 15 ? 'G4' : 'G5';
