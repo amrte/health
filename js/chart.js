@@ -76,7 +76,7 @@ export function lineChart(host, { pts, unit }) {
     tip.replaceChildren(
       h('div', { class: 'tip-value' }, `${p.qualifier}${fmtNum(p.v)} ${unit}`, st ? h('span', { class: `tip-status st-${p.status}` }, ' · ', st) : null),
       h('div', { class: 'tip-meta' }, fmtDate(p.o.date)),
-      p.lab ? h('div', { class: 'tip-meta' }, p.lab) : null,
+      ...(p.lab ? [h('div', { class: 'tip-meta' }, p.lab)] : []),
     );
     tip.hidden = false;
     const w = tip.offsetWidth;

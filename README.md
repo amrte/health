@@ -56,6 +56,18 @@ works offline.
   source. Where that wasn't possible (for example HDL cut-offs, or hemoglobin
   limits above age 65), the app uses only the lab's own range.
 
+**Discuss with Claude**
+- A button on the overview and on every test page. It builds a summary to paste
+  into the Claude app. You choose:
+  - which tests to include (from a test page, it starts with that test and
+    related ones)
+  - all history or only the last 3 results
+  - whether to include age and sex, the app's findings, and vaccinations
+  - an optional question of your own
+- The summary asks Claude to explain the results, look up current guidelines,
+  systematic reviews and recent studies with links, and suggest questions for
+  your doctor. Nothing is sent until you paste it.
+
 **Vaccinations**
 - Date, vaccine, diseases covered, dose, batch number, place and next-due date.
 - Diseases are filled in from the vaccine name (e.g. *Boostrix Polio* →

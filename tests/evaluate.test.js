@@ -73,3 +73,20 @@ test('every source reference resolves', () => {
     for (const id of [...(kb.sources ?? []), ...(kb.thresholds ?? []).map((t) => t.source)]) assert.ok(SOURCES[id], `${key}: ${id}`);
   }
 });
+
+test('discussion summary', async () => {
+  const { buildSummary } = await import('../js/summary.js');
+  const by = data([
+    ['ldl', '2025-01-01', '135', 'mg/dl', '< 116'], ['ldl', '2026-01-01', 3.6, 'mmol/L', '< 3.0'],
+    ['ferritin', '2026-01-01', 30, 'µg/L', '30-400'],
+  ]);
+  const findings = evaluate(by, {}, NOW);
+  const text = buildSummary(by, { keys: new Set(['ldl']), history: 'all', includeProfile: true, profile: { sex: 'male', birthYear: 1980 },
+    includeFindings: true, findings, includeVaccines: false, question: 'Is this a concern?', now: NOW });
+  assert.match(text, /About me: male, 46 years old\./);
+  assert.match(text, /My question: Is this a concern\?/);
+  assert.match(text, /- LDL cholesterol \(mmol\/L\), lab range < 3: 2025-01-01: 3\.49 \(H\); 2026-01-01: 3\.6 \(H\)/);
+  assert.match(text, /LDL above all ESC\/EAS goals.*\[ESC\/EAS 2019\]/);
+  assert.ok(!text.includes('Ferritin'), 'only selected tests');
+  assert.match(text, /cite each source with a link/);
+});

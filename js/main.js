@@ -5,6 +5,7 @@ import { load } from './store.js';
 import { viewOverview, viewMetric, viewReports, viewReport } from './views.js';
 import { viewEditor, editorDirty, clearDirty } from './editor.js';
 import { viewData } from './data.js';
+import { viewDiscuss } from './discuss.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -18,6 +19,7 @@ const ROUTES = [
   [/^#\/vaccines\/add$/, (root) => viewVaccineEditor(root, null), 'vaccines'],
   [/^#\/vaccines\/edit\/(.+)$/, (root, id) => viewVaccineEditor(root, id), 'vaccines'],
   [/^#\/vaccine\/(.+)$/, (root, id) => viewVaccine(root, id), 'vaccines'],
+  [/^#\/discuss(?:\/(.+))?$/, (root, key) => viewDiscuss(root, key), 'overview'],
   [/^#\/data$/, (root) => viewData(root), 'data'],
 ];
 

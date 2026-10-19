@@ -51,6 +51,19 @@ await page.goto(base + '#/test/ferritin');
 await page.getByText('About this test').waitFor();
 assert.ok(await page.getByRole('link', { name: /ferritin concentrations/ }).isVisible());
 
+step('discuss with Claude');
+await page.goto(base + '#/test/ferritin');
+await page.getByRole('link', { name: 'Discuss with Claude' }).click();
+await page.locator('.summary-preview').waitFor();
+let summary = await page.locator('.summary-preview').textContent();
+assert.match(summary, /Ferritin \(µg\/L\)/);
+assert.ok(!summary.includes('Hemoglobin ('), 'only the chosen test and related ones');
+await page.getByPlaceholder(/Why does my ferritin/).fill('Why is it falling?');
+assert.match(await page.locator('.summary-preview').textContent(), /My question: Why is it falling\?/);
+await page.getByRole('button', { name: 'All tests' }).click();
+assert.match(await page.locator('.summary-preview').textContent(), /Hemoglobin \(g\/L\)/);
+await shot('02c-discuss');
+
 step('hemoglobin from g/L, g/dL and г/л on one chart');
 await page.goto(base + '#/test/hb');
 await page.locator('.chart svg').waitFor();

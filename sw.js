@@ -1,10 +1,10 @@
 // Offline support: serve the app from cache, refresh the cache in the background.
-const CACHE = 'health-records-v2';
+const CACHE = 'health-records-v3';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/dom.js', 'js/db.js', 'js/store.js', 'js/format.js', 'js/units.js', 'js/metrics.js',
   'js/parse.js', 'js/chart.js', 'js/ui.js', 'js/views.js', 'js/editor.js', 'js/vaccines.js', 'js/data.js', 'js/demo.js',
-  'js/calc.js', 'js/evaluate.js', 'js/knowledge.js', 'js/insights.js',
+  'js/calc.js', 'js/evaluate.js', 'js/knowledge.js', 'js/insights.js', 'js/summary.js', 'js/discuss.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 

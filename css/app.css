@@ -339,3 +339,10 @@ table.limits { width: 100%; border-collapse: collapse; font-size: 14px; }
 .limits .limit-value { width: 45%; font-weight: 550; }
 .about { overflow-wrap: anywhere; }
 ul.sources { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+
+/* discuss with Claude */
+.check { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 15px; cursor: pointer; }
+.check input { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+.pick fieldset { border: 0; padding: 0; margin: 12px 0 0; }
+.pick legend { font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 0; }
+.summary-preview { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, Menlo, monospace; color: var(--ink-2); max-height: 420px; overflow: auto; }

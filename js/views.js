@@ -4,6 +4,7 @@ import { h, go, toast } from './dom.js';
 import { CATEGORIES, CATEGORY_NAME } from './metrics.js';
 import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport, findingsFor } from './store.js';
 import { findingsCard, findingItem, aboutCard } from './insights.js';
+import { discussButton } from './discuss.js';
 import { fmtDate, fmtRange } from './format.js';
 import { lineChart, sparkline } from './chart.js';
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
@@ -52,7 +53,7 @@ export function viewOverview(root) {
   const lastDate = state.reports.reduce((a, r) => (r.date > a ? r.date : a), '');
   const list = h('div');
   root.append(
-    pageHead('Health records', { sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
+    pageHead('Health records', { actions: state.obs.length ? discussButton() : null, sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
     searchBox(overviewQuery, 'Search tests, labs, notes', (q) => { overviewQuery = q; render(); }),
     list);
 
@@ -122,6 +123,7 @@ export function viewMetric(root, key) {
     h('div', { class: 'hero-value' }, valueText(last, unit)),
     statusChip(last.status)));
   root.append(findingsCard(findingsFor(key), { empty: m.custom ? null : 'No findings for this test.' }));
+  root.append(h('div', { class: 'btn-row' }, discussButton(key)));
 
   const chartCard = h('section', { class: 'card' });
   root.append(chartCard);
