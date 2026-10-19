@@ -11,6 +11,8 @@ import { viewFitness, viewFitnessKind } from './fitness.js';
 import { viewBp } from './bp.js';
 import { viewDna } from './dna.js';
 import { viewSearch } from './search.js';
+import { viewDental, viewTooth, viewDentalVisit, viewDentalEditor, dentalDirty, clearDentalDirty } from './dental.js';
+import { viewMore } from './more.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -31,24 +33,32 @@ const ROUTES = [
   [/^#\/discuss(?:\/(.+))?$/, (root, key) => viewDiscuss(root, key), 'overview'],
   [/^#\/data$/, (root) => viewData(root), 'data'],
   [/^#\/search(?:\/(.*))?$/, (root, q) => viewSearch(root, q), 'search'],
+  [/^#\/more$/, (root) => viewMore(root), 'more'],
+  [/^#\/teeth$/, (root) => viewDental(root), 'teeth'],
+  [/^#\/teeth\/tooth\/(\d\d)$/, (root, t) => viewTooth(root, t), 'teeth'],
+  [/^#\/teeth\/visit\/(.+)$/, (root, id) => viewDentalVisit(root, id), 'teeth'],
+  [/^#\/teeth\/add(?:\/(\d\d))?$/, (root, t) => viewDentalEditor(root, null, t), 'teeth'],
+  [/^#\/teeth\/edit\/(.+)$/, (root, id) => viewDentalEditor(root, id), 'teeth'],
 ];
 
 const main = document.getElementById('view');
 let current = location.hash;
 
 async function route() {
-  if ((editorDirty() || vaccineEditorDirty()) && location.hash !== current) {
+  if ((editorDirty() || vaccineEditorDirty() || dentalDirty()) && location.hash !== current) {
     if (!confirm('Leave without saving?')) {
       history.replaceState(null, '', current || '#/');
       return;
     }
     clearDirty();
     clearVaccineDirty();
+    clearDentalDirty();
   }
   current = location.hash;
   const [re, view, tab] = ROUTES.find(([re]) => re.test(location.hash)) ?? ROUTES[0];
   const arg = location.hash.match(re)?.[1];
-  for (const a of document.querySelectorAll('.tabs a')) a.toggleAttribute('aria-current', a.dataset.tab === tab);
+  const viaMore = ['heart', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
+  for (const a of document.querySelectorAll('.tabs a')) a.toggleAttribute('aria-current', a.dataset.tab === tab || (a.dataset.tab === 'more' && viaMore));
   const root = h('div', { class: 'page' });
   main.replaceChildren(root);
   window.scrollTo(0, 0);
@@ -88,7 +98,7 @@ document.querySelector('.tabs .side-search')?.addEventListener('input', (e) => {
     window.dispatchEvent(new HashChangeEvent('hashchange'));
   } else location.hash = hash;
 });
-window.addEventListener('beforeunload', (e) => { if (editorDirty() || vaccineEditorDirty()) e.preventDefault(); });
+window.addEventListener('beforeunload', (e) => { if (editorDirty() || vaccineEditorDirty() || dentalDirty()) e.preventDefault(); });
 
 try {
   await load();

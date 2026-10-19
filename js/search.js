@@ -13,6 +13,7 @@ import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
 import { fmtDuration } from './fitness.js';
 import { pageHead } from './ui.js';
+import { teethState, toothName, PROCEDURE_NAME } from './dental-data.js';
 
 // App sections, with English and Ukrainian keywords.
 const SECTIONS = [
@@ -23,6 +24,8 @@ const SECTIONS = [
   ['Blood pressure', '#/bp', 'blood pressure bp hypertension тиск артеріальний гіпертонія'],
   ['Vaccinations', '#/vaccines', 'vaccines vaccinations immunisation booster вакцини щеплення ревакцинація'],
   ['DNA', '#/dna', 'dna genetics 23andme tellmegen genome днк генетика геном'],
+  ['Teeth', '#/teeth', 'teeth dental dentist tooth x-ray bill filling crown зуби стоматолог зуб рентген пломба коронка'],
+  ['Heart', '#/heart', 'heart cardiology ecg ekg holter echo echocardiogram серце кардіологія екг холтер ехо'],
   ['Discuss with Claude', '#/discuss', 'discuss claude ask question summary обговорити запитати claude'],
   ['Data & backup', '#/data', 'data backup export import profile delete demo дані резервна копія експорт імпорт профіль'],
 ];
@@ -35,6 +38,7 @@ const TYPES = [
   ['vaccine', 'Vaccinations'],
   ['dna', 'DNA'],
   ['bp', 'Blood pressure'],
+  ['dental', 'Teeth'],
   ['workout', 'Workouts'],
 ];
 
@@ -83,6 +87,16 @@ export function buildIndex(st = state) {
   }
   for (const [d, rs] of byDay) {
     add('bp', `Blood pressure ${fmtDate(d)}`, rs.map((r) => `${r.sys}/${r.dia}`).join(', '), '#/bp', 'blood pressure тиск', d, rs.map((r) => r.note));
+  }
+
+  for (const v of st.dental ?? []) {
+    const procs = [...new Set((v.items ?? []).map((it) => PROCEDURE_NAME[it.procedure] ?? it.procedure))];
+    add('dental', `Dental visit ${fmtDate(v.date)}`, [v.clinic, procs.join(', ')].filter(Boolean).join(' · '), `#/teeth/visit/${encodeURIComponent(v.id)}`,
+      'dental dentist teeth зуби стоматолог', v.date, v.note, v.dentist, (v.items ?? []).map((it) => [it.tooth, it.note, it.material]), (v.files ?? []).map((f) => f.xrayType ? 'x-ray ' + f.xrayType : f.kind));
+  }
+  for (const s of Object.values(teethState(st.dental ?? []))) {
+    if (!s.history.length) continue;
+    add('dental', `Tooth ${s.tooth}`, toothName(s.tooth), `#/teeth/tooth/${s.tooth}`, 'tooth зуб', s.history.map((it) => PROCEDURE_NAME[it.procedure]));
   }
 
   for (const w of st.workouts) {

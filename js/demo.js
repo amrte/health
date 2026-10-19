@@ -87,7 +87,8 @@ export function demoData() {
     ['2025-11-03', 'Comirnaty', ['covid'], 'booster', ''],
     ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', ''],
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
-  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes() };
+  const { dental, files } = demoDental();
+  return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes(), dental, files };
 }
 
 export const DEMO_PROFILE = { sex: 'male', birthYear: 1980 };
@@ -158,4 +159,60 @@ export function demoGenomes() {
     { id: 'genome:23andMe', provider: '23andMe', fileName: 'genome_Demo_Person_v5_Full.txt', importedAt: at, build: 'GRCh37', total: 638000, snps, demo: true },
     { id: 'genome:tellmeGen', provider: 'tellmeGen', fileName: 'tellmegen_demo.csv', importedAt: at, build: 'GRCh37', total: 751000, snps: tellme, demo: true },
   ];
+}
+
+// Made-up X-ray-like pictures (drawn, not real radiographs) so the gallery has something to show.
+function xraySvg(kind, seed) {
+  let s = seed;
+  const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  const W = kind === 'panoramic' ? 900 : 500;
+  const H = kind === 'panoramic' ? 420 : 360;
+  const n = kind === 'panoramic' ? 16 : 4;
+  let teeth = '';
+  for (const [row, y0, dir] of [[0, H * 0.18, 1], [1, H * 0.54, -1]]) {
+    for (let i = 0; i < n; i++) {
+      const x = W * 0.06 + (i * (W * 0.88)) / n;
+      const curve = kind === 'panoramic' ? Math.abs(i - (n - 1) / 2) * 3 * dir : 0;
+      const w = (W * 0.88) / n - 6;
+      const hgt = H * 0.28;
+      const fill = rnd() > 0.8 ? `<rect x="${x + w * 0.25}" y="${y0 + curve + (row ? hgt * 0.05 : hgt * 0.6)}" width="${w * 0.5}" height="${hgt * 0.22}" rx="4" fill="#f4f4f4"/>` : '';
+      teeth += `<rect x="${x}" y="${y0 + curve}" width="${w}" height="${hgt}" rx="${w * 0.35}" fill="url(#g)" opacity="${0.75 + rnd() * 0.2}"/>${fill}`;
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs><radialGradient id="g" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#d9d9d9"/><stop offset="1" stop-color="#5a5a5a"/></radialGradient></defs><rect width="${W}" height="${H}" fill="#0b0b0b"/>${teeth}<text x="${W - 14}" y="${H - 14}" fill="#888" font-family="sans-serif" font-size="16" text-anchor="end">DEMO · not a real X-ray</text></svg>`;
+}
+
+function billSvg(lines, total, currency) {
+  const rows = lines.map(([t, p], i) => `<text x="40" y="${150 + i * 32}" font-size="18">${t}</text><text x="560" y="${150 + i * 32}" font-size="18" text-anchor="end">${p}</text>`).join('');
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 ${220 + lines.length * 32}" width="600" height="${220 + lines.length * 32}" font-family="sans-serif"><rect width="100%" height="100%" fill="#fff"/><text x="40" y="60" font-size="26" font-weight="bold">Demo dental clinic — invoice</text><text x="40" y="100" font-size="16" fill="#666">Fictional document for the demo</text>${rows}<text x="40" y="${180 + lines.length * 32}" font-size="20" font-weight="bold">Total</text><text x="560" y="${180 + lines.length * 32}" font-size="20" font-weight="bold" text-anchor="end">${total} ${currency}</text></svg>`;
+}
+
+// Five dental visits in three countries, with drawn X-rays and a bill.
+export function demoDental(today = new Date()) {
+  const files = [];
+  const file = (svg, name, meta) => {
+    const id = uid();
+    files.push({ id, blob: new Blob([svg], { type: 'image/svg+xml' }), type: 'image/svg+xml', name });
+    return { id, type: 'image/svg+xml', name, ...meta };
+  };
+  const pad = (n) => String(n).padStart(2, '0');
+  const d = (back) => { const x = new Date(today.getFullYear(), today.getMonth(), today.getDate() - back); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
+  const it = (tooth, procedure, price, extra = {}) => ({ tooth, procedure, surfaces: '', material: '', price, note: '', ...extra });
+  const visits = [
+    { date: '2021-03-10', clinic: 'Demo dental clinic, Helsinki', dentist: 'Dr. Demo', currency: 'EUR', nextCheckup: '2022-03-10',
+      items: [it('', 'checkup', 65), it('', 'xray', 0), it('36', 'filling', 120, { surfaces: 'MO', material: 'composite' }), it('46', 'filling', 95, { surfaces: 'O', material: 'composite' })],
+      files: [file(xraySvg('panoramic', 3), 'panoramic-2021.svg', { kind: 'xray', xrayType: 'panoramic', teeth: [] }),
+        file(billSvg([['Check-up', '65.00'], ['Filling 36 MO', '120.00'], ['Filling 46 O', '95.00']], '280.00', 'EUR'), 'bill-2021.svg', { kind: 'bill', teeth: [] })] },
+    { date: '2022-09-05', clinic: 'Демо-стоматологія, Київ', dentist: '', currency: 'UAH',
+      items: [it('26', 'root_canal', 4800), it('26', 'crown', 9500, { material: 'zirconia' })],
+      files: [file(xraySvg('periapical', 9), 'periapical-26.svg', { kind: 'xray', xrayType: 'periapical', teeth: ['26'] })] },
+    { date: '2023-11-20', clinic: 'Demo dental clinic, Helsinki', dentist: 'Dr. Demo', currency: 'EUR', nextCheckup: '2024-11-20',
+      items: [it('', 'cleaning', 85), it('15', 'filling', 130, { surfaces: 'DO', material: 'composite' }), it('', 'xray', 0)],
+      files: [file(xraySvg('bitewing', 17), 'bitewing-2023.svg', { kind: 'xray', xrayType: 'bitewing', teeth: ['14', '15', '16', '17', '44', '45', '46', '47'] })] },
+    { date: '2025-02-14', clinic: 'Demo-Zahnarztpraxis, Berlin', dentist: '', currency: 'EUR',
+      items: [it('38', 'extraction', 150, { note: 'wisdom tooth' }), it('48', 'missing', null, { note: 'never erupted' })], files: [] },
+    { date: d(200), clinic: 'Demo dental clinic, Helsinki', dentist: 'Dr. Demo', currency: 'EUR', nextCheckup: d(17),
+      items: [it('', 'checkup', 65), it('', 'cleaning', 85), it('17', 'watch', null, { note: 'early caries, check next time' })], files: [] },
+  ].map((v) => ({ id: uid(), total: null, note: '', demo: true, ...v }));
+  return { dental: visits, files };
 }

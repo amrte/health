@@ -22,6 +22,7 @@ export const state = {
   workouts: [], // { id, start, sport, durationS, distanceM, hrAvg, hrMax, kcal, load, source }
   bp: [], // { id, time: 'YYYY-MM-DDTHH:MM', sys, dia, pulse, arm, place: 'home' | 'clinic', note, source }
   genomes: [], // { id, provider, fileName, importedAt, build, total, snps: { rsid: genotype } }
+  dental: [], // visits: { id, date, clinic, dentist, currency, total, nextCheckup, note, items: [{ tooth, procedure, surfaces, … }], files }
   findings: [],
   reportById: new Map(),
   byMetric: new Map(), // key → { m, pts }
@@ -30,9 +31,9 @@ export const state = {
 
 export async function load() {
   let profile;
-  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts, state.bp, state.genomes] = await Promise.all([
+  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts, state.bp, state.genomes, state.dental] = await Promise.all([
     db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile'),
-    db.getAll('measures'), db.getAll('workouts'), db.getAll('bp'), db.getAll('genomes')]);
+    db.getAll('measures'), db.getAll('workouts'), db.getAll('bp'), db.getAll('genomes'), db.getAll('dental')]);
   state.profile = profile ?? {};
   derive();
 }
@@ -218,5 +219,16 @@ export async function saveGenome(genome) {
 
 export async function deleteGenome(id) {
   await db.write({ del: { genomes: [id] } });
+  await load();
+}
+
+export async function saveDental(visit, { newFiles = [], removedFileIds = [] } = {}) {
+  await db.write({ put: { dental: [visit], files: newFiles }, del: { files: removedFileIds } });
+  await load();
+}
+
+export async function deleteDental(id) {
+  const v = state.dental.find((x) => x.id === id);
+  await db.write({ del: { dental: [id], files: (v?.files ?? []).map((f) => f.id) } });
   await load();
 }

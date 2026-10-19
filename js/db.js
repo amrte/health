@@ -1,8 +1,8 @@
 // IndexedDB storage. Everything stays in this browser on this device.
 
 const NAME = 'health-records';
-const VERSION = 4;
-export const STORES = ['reports', 'obs', 'files', 'vaccines', 'settings', 'measures', 'workouts', 'bp', 'genomes'];
+const VERSION = 5;
+export const STORES = ['reports', 'obs', 'files', 'vaccines', 'settings', 'measures', 'workouts', 'bp', 'genomes', 'dental'];
 
 // Some browsers (e.g. Safari for files opened from disk) refuse IndexedDB. The app
 // then keeps data in memory for the session and tells the user.
@@ -37,6 +37,7 @@ function openIdb() {
       if (!has('workouts')) db.createObjectStore('workouts', { keyPath: 'id' });
       if (!has('bp')) db.createObjectStore('bp', { keyPath: 'id' });
       if (!has('genomes')) db.createObjectStore('genomes', { keyPath: 'id' });
+      if (!has('dental')) db.createObjectStore('dental', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

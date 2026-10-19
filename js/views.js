@@ -6,6 +6,8 @@ import { state, matches, metricSearchText, reportSearchText, reportPoints, delet
 import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
 import { searchResults, arrowKeys } from './search.js';
+import { nextCheckup } from './dental.js';
+import { todayIso } from './format.js';
 import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
 import { fmtDate, fmtRange } from './format.js';
@@ -49,7 +51,7 @@ function emptyState() {
 }
 
 export function viewOverview(root) {
-  if (!state.obs.length && !state.vaccines.length && !state.measures.length && !state.workouts.length && !state.bp.length) {
+  if (!state.obs.length && !state.vaccines.length && !state.measures.length && !state.workouts.length && !state.bp.length && !state.dental.length) {
     root.append(pageHead('Health records'), emptyState());
     return;
   }
@@ -94,10 +96,19 @@ export function viewOverview(root) {
     // Schedule advice for diseases that don't already have a due date set by you.
     const dueTargets = new Set(due.flatMap((p) => p.last.targets ?? []));
     const sched = state.vaccines.length ? dueAdvice().filter((a) => !dueTargets.has(a.target)) : [];
-    if ((due.length || sched.length) && !overviewQuery) {
+    // Dental check-up: overdue, or within the next 30 days.
+    const dent = nextCheckup();
+    const soon = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+    const dentRow = dent && dent.date <= soon ? h('a', { class: 'row', href: '#/teeth' }, h('div', { class: 'row-main' },
+      h('div', { class: 'row-title' }, 'Dental check-up'),
+      h('div', { class: 'row-meta' }, `Recommended at ${dent.visit.clinic || 'your last visit'} on ${fmtDate(dent.visit.date)}`),
+      dent.date < todayIso()
+        ? h('span', { class: 'status st-high' }, h('span', { class: 'status-icon' }, '▲'), ` Overdue since ${fmtDate(dent.date)}`)
+        : h('span', { class: 'status st-soon' }, h('span', { class: 'status-icon' }, '●'), ` Due ${fmtDate(dent.date)}`))) : null;
+    if ((due.length || sched.length || dentRow) && !overviewQuery) {
       out.push(h('section', { class: 'group wide' },
-        h('h2', null, 'Vaccinations due'),
-        h('div', { class: 'card list' }, due.map(protectionRow), sched.map(dueAdviceRow))));
+        h('h2', null, 'Due and overdue'),
+        h('div', { class: 'card list' }, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
     }
     const flagged = entries.filter((e) => e.last.status === 'high' || e.last.status === 'low');
     if (flagged.length && !overviewQuery) {

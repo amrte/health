@@ -31,6 +31,7 @@ async function exportBackup() {
     workouts: state.workouts,
     bp: state.bp,
     genomes: state.genomes,
+    dental: state.dental,
     profile: state.profile,
     files: await Promise.all(files.map(async (f) => ({ id: f.id, type: f.type, name: f.name, data: await blobToDataUrl(f.blob) }))),
   };
@@ -67,16 +68,16 @@ async function importBackup(file) {
   const settings = data.profile && typeof data.profile === 'object' ? [{ ...data.profile, id: 'profile' }] : [];
   const arr = (x) => (Array.isArray(x) ? x : []);
   await db.write({ put: { reports: data.reports, obs: data.obs, vaccines, files, settings, measures: arr(data.measures), workouts: arr(data.workouts),
-    bp: arr(data.bp), genomes: arr(data.genomes) } });
+    bp: arr(data.bp), genomes: arr(data.genomes), dental: arr(data.dental) } });
   await load();
   toast('Backup imported');
   go('#/');
 }
 
 async function writeDemo() {
-  const { reports, obs, vaccines, measures, workouts, bp, genomes } = demoData();
+  const { reports, obs, vaccines, measures, workouts, bp, genomes, dental, files } = demoData();
   const settings = state.profile.sex || state.profile.birthYear ? [] : [{ id: 'profile', ...DEMO_PROFILE }];
-  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts, bp, genomes } });
+  await db.write({ put: { reports, obs, vaccines, settings, measures, workouts, bp, genomes, dental, files } });
   await load();
 }
 
@@ -104,6 +105,8 @@ async function removeDemo() {
     workouts: state.workouts.filter((w) => w.source === 'demo').map((w) => w.id),
     bp: state.bp.filter((r) => r.source === 'demo').map((r) => r.id),
     genomes: state.genomes.filter((g) => g.demo).map((g) => g.id),
+    dental: state.dental.filter((v) => v.demo).map((v) => v.id),
+    files: state.dental.filter((v) => v.demo).flatMap((v) => (v.files ?? []).map((f) => f.id)),
   } });
   await load();
   toast('Demo data removed');
@@ -175,10 +178,10 @@ export async function viewData(root) {
       h('li', null, 'Tap the Share button, then “Add to Home Screen”.'),
       h('li', null, 'Open the app from the Home Screen icon from now on. It works offline, and Safari doesn’t clear its data after a week of not using it.'))));
 
-  const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo');
+  const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo') || state.dental.some((v) => v.demo);
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Demo data'),
-    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
+    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests and five dental visits. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
     h('div', { class: 'btn-row' },
       hasDemo
         ? h('button', { class: 'btn', type: 'button', onclick: async () => { await removeDemo(); go('#/data'); } }, 'Remove demo data')
@@ -186,7 +189,7 @@ export async function viewData(root) {
 
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Delete everything'),
-    h('p', null, 'Removes all reports, results, vaccinations and photos from this device.'),
+    h('p', null, 'Removes everything this app stored on this device.'),
     h('button', { class: 'btn danger', type: 'button', onclick: deleteAll }, 'Delete all data')));
 
   root.append(h('p', { class: 'muted small pad' }, 'This app doesn’t give medical advice. Reference ranges come from your labs; ask your doctor what a result means for you.'));

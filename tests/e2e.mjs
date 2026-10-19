@@ -34,7 +34,7 @@ await page.getByText('Out of range at last test').waitFor();
 await shot('02-overview');
 const rows = await page.locator('.group .row').count();
 assert.ok(rows > 15, `overview rows: ${rows}`);
-assert.ok(await page.getByText('Vaccinations due').isVisible());
+assert.ok(await page.getByText('Due and overdue').isVisible());
 
 step('profile and findings');
 await page.goto(base + '#/data');

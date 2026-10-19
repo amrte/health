@@ -466,3 +466,44 @@ mark { background: color-mix(in srgb, var(--accent) 22%, transparent); color: in
   .search-results > * { break-inside: avoid; margin: 0 0 20px; }
   .search-results > * + * { margin-top: 0; }
 }
+
+/* navigation: some sections only in the wide sidebar, "More" only on phones */
+.tabs .desk-only { display: none; }
+@media (min-width: 960px) {
+  .tabs .desk-only { display: flex; }
+  .tabs .mobile-only { display: none; }
+}
+
+/* teeth */
+.tooth-chart { display: grid; gap: 6px; }
+.arch { display: grid; gap: 8px; }
+.half-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.half-teeth { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.arch + .arch { margin-top: 6px; }
+.arch + .arch .half { display: flex; flex-direction: column-reverse; }
+.arch + .arch .half-label { margin: 3px 0 0; }
+.tooth {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  min-height: 48px; border-radius: 10px 10px 14px 14px; border: 1px solid var(--axis);
+  background: var(--surface); color: var(--ink); text-decoration: none; font-variant-numeric: tabular-nums;
+}
+.arch + .arch .tooth { border-radius: 14px 14px 10px 10px; }
+.tooth-num { font-size: 12px; color: var(--muted); }
+.tooth-badges { font-size: 12px; font-weight: 650; min-height: 15px; color: var(--accent-ink); }
+.tooth.treated { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 45%, var(--axis)); }
+.tooth.missing { background: transparent; border-style: dashed; }
+.tooth.missing .tooth-badges { color: var(--muted); }
+.tooth:hover { border-color: var(--accent); }
+.tooth:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.xray-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.xray { margin: 0; }
+.xray .thumb { width: 100%; height: auto; aspect-ratio: 16 / 10; }
+.xray figcaption { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.file-edit { grid-template-columns: 96px 1fr; }
+.file-edit .thumb { width: 96px; height: 96px; }
+@media (min-width: 960px) {
+  .arch { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .arch .half:last-child .half-label { text-align: right; }
+  .tooth { min-height: 58px; }
+}
+.more-list .row-title { font-size: 17px; }
