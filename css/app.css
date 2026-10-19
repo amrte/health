@@ -755,3 +755,5 @@ mark { background: var(--accent-soft); }
 .f-date .link-btn:hover { border-color: var(--accent); }
 .date-own { display: flex; gap: 6px; align-items: center; }
 .date-own input { flex: 1; min-width: 0; }
+.unit-choices { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.unit-choices .btn { font-weight: 600; }

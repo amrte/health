@@ -196,7 +196,8 @@ export function viewMetric(root, key) {
   chartCard.append(h('p', { class: 'caption' },
     info?.band ? `Shaded: reference range ${info.band} ${unit} from the latest report that gives one. ` : '',
     pts.some((p) => p.converted) ? `Values from labs using other units are converted to ${unit}. ` : '',
-    skipped ? `${skipped} result(s) not charted: unit can't be converted.` : ''));
+    skipped ? `${skipped} result(s) not charted: the unit isn’t clear — ` : '',
+    skipped ? pts.filter((p) => p.unconvertible).map((p, i) => [i ? ', ' : '', h('a', { href: `#/edit/${enc(p.o.reportId)}` }, `fix the unit (${fmtDate(p.o.date)})`)]) : ''));
   const medsCard = metricMedsCard(key);
   if (medsCard) root.append(medsCard);
 

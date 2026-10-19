@@ -108,3 +108,85 @@ export function convertFromCanonical(value, unit, metric) {
   if (f == null) return null;
   return Array.isArray(f) ? (value - f[1]) / f[0] : value / f;
 }
+
+// ---- suggestions for unclear units ------------------------------------------------
+
+// "mg/dl" → "mg/dL", "umol/l" → "µmol/L", "u/l" → "U/L" for showing a unit.
+export function prettyUnit(u) {
+  let s = String(u);
+  if (/[A-ZµΜ⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(s)) return s; // already written for people
+  if (/^u\/l$/.test(s)) return 'U/L';
+  if (/^mu\/l$/.test(s)) return 'mU/L';
+  s = s.replace(/^u(?=[a-z])/, 'µ').replace(/^(µ|m)?iu/, (x, p) => `${p ?? ''}IU`);
+  return s.replace(/\/dl$/, '/dL').replace(/\/ml$/, '/mL').replace(/\/l$/, '/L');
+}
+
+// How alike two written units are: 3 one contains the other ("pg/Ery" ~ "pg"),
+// 2 same amount part ("mg" in "mg/dl" ~ "mg/l"), 1 same per-part, else 0.
+function oneEditApart(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  return a.slice(i + (a.length >= b.length ? 1 : 0)) === b.slice(i + (b.length >= a.length ? 1 : 0));
+}
+function unitLikeness(a, b) {
+  if (!a || !b) return 0;
+  if (a.startsWith(b) || b.startsWith(a) || oneEditApart(a, b)) return 3;
+  const [an, ad] = a.split('/');
+  const [bn, bd] = b.split('/');
+  if (an && an === bn) return 2;
+  if (ad && ad === bd) return 1;
+  return 0;
+}
+
+// Units the metric understands, best first, for a value printed in `unit`.
+// `typical` is a usual value for this person in the canonical unit (e.g. the
+// median of earlier results), used to prefer units that give a similar value.
+// Returns [{ unit, v }] with the value converted by that unit.
+export function suggestUnits(unit, metric, value, typical = null) {
+  if (!metric) return [];
+  const raw = unitForms(unit).map((f) => f.toLowerCase().replace(/\s+/g, '')).filter(Boolean);
+  const forms = [...new Set([...unitForms(unit).map(normUnit), ...raw])].filter(Boolean);
+  const current = unitFor(unit, metric);
+  // One candidate per conversion: "pg", "pg/Ery" and "pg/cell" are the same unit.
+  const factor = (x) => JSON.stringify(normUnit(x) === metric.cu ? 1 : metric.altN[normUnit(x)]);
+  const cands = [metric.unit, ...Object.keys(metric.alt ?? {})].filter((x, i, all) => all.findIndex((y) => factor(y) === factor(x)) === i);
+  const scored = cands
+    .filter((x) => normUnit(x) !== current && factor(x) !== factor(current === metric.cu ? metric.unit : Object.keys(metric.alt ?? {}).find((y) => normUnit(y) === current) ?? '\0'))
+    .map((x) => {
+      const v = value == null ? null : convert(value, x, metric);
+      // All spellings of the unit ("ng/ml" for µg/L); show the one closest to the printed unit.
+      const spellings = [x, normUnit(x), ...Object.keys(SYN).filter((k) => SYN[k] === normUnit(x))];
+      let like = 0;
+      let shown = x;
+      for (const sp of spellings) {
+        const l = Math.max(0, ...forms.map((f) => unitLikeness(f, sp.toLowerCase())));
+        if (l > like) { like = l; shown = sp; }
+      }
+      const off = typical > 0 && v > 0 ? Math.abs(Math.log10(v / typical)) : null;
+      return { unit: prettyUnit(shown), v, like, off, score: like - (off == null ? 0 : off * 2) };
+    })
+    .filter((c) => c.like > 0 || (c.off != null && c.off < 0.5));
+  // A unit that looks like the printed one and fits wins over ones that only fit.
+  const good = scored.some((c) => c.like > 0 && (c.off == null || c.off < 0.3));
+  return scored.filter((c) => !good || c.like > 0).sort((a, b) => b.score - a.score).slice(0, 3);
+}
+
+// A convertible value far from this person's usual one (6× or more), where
+// another unit would bring it close: probably the wrong unit was copied.
+export function unitLooksWrong(unit, metric, value, typical) {
+  if (!metric || value == null || !(typical > 0)) return [];
+  const v = convert(value, unit, metric);
+  if (!(v > 0) || Math.abs(Math.log10(v / typical)) < Math.log10(6)) return [];
+  return suggestUnits(unit, metric, value, typical).filter((c) => c.off != null && c.off < Math.log10(1.5));
+}
+
+// Every unit the metric understands (one per conversion), with the value it gives.
+export function unitOptions(metric, value) {
+  if (!metric) return [];
+  const factor = (x) => JSON.stringify(normUnit(x) === metric.cu ? 1 : metric.altN[normUnit(x)]);
+  return [metric.unit, ...Object.keys(metric.alt ?? {})]
+    .filter((x, i, all) => all.findIndex((y) => factor(y) === factor(x)) === i)
+    .map((x) => ({ unit: prettyUnit(x), v: value == null ? null : convert(value, x, metric) }))
+    .slice(0, 5);
+}

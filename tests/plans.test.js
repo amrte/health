@@ -313,3 +313,22 @@ test('Finnish paper report: min/max columns, order lines, date columns', async (
   assert.match(buildPrompt('lab'), /not "Valmis"/);
   assert.match(buildPrompt('lab'), /with only max "< max"/);
 });
+
+test('unit suggestions: unclear units and units that look wrong', async () => {
+  const { suggestUnits, unitLooksWrong, unitOptions, prettyUnit, canConvert } = await import('../js/units.js');
+  const { getMetric } = await import('../js/metrics.js');
+  const units = (xs) => xs.map((c) => c.unit);
+  assert.deepEqual(units(suggestUnits('pg/Erythrocyt', getMetric('mch'), 30.5, 30)), ['pg'], 'one per conversion');
+  assert.deepEqual(units(suggestUnits('gr/dl', getMetric('hb'), 14.7, 145)), ['g/dL']);
+  assert.deepEqual(units(suggestUnits('mg/d', getMetric('chol'), 194, null)), ['mg/dL']);
+  assert.deepEqual(units(suggestUnits('ng/mll', getMetric('vitd'), 24.6, null)), ['ng/mL'], 'typo of a synonym spelling');
+  assert.deepEqual(units(suggestUnits('µIU/mI', getMetric('tsh'), 2.1, 2.5)), ['µIU/mL']);
+  assert.ok(suggestUnits('gr/dl', getMetric('hb'), 14.7, 145).every((c) => canConvert(c.unit, getMetric('hb'))), 'suggestions convert');
+  assert.deepEqual(units(unitLooksWrong('g/L', getMetric('hb'), 14.7, 145)), ['g/dL'], 'Hb 14.7 g/L is likely g/dL');
+  assert.deepEqual(unitLooksWrong('g/L', getMetric('hb'), 150, 145), [], 'a usual value is fine');
+  assert.deepEqual(units(unitLooksWrong('mmol/L', getMetric('glucose'), 98, 5.4)), ['mg/dL']);
+  assert.deepEqual(unitLooksWrong('mg/L', getMetric('crp'), 40, 1), [], 'a real rise is not a unit problem');
+  assert.deepEqual(unitLooksWrong('g/L', getMetric('hb'), 14.7, null), [], 'needs history');
+  assert.deepEqual(units(unitOptions(getMetric('hb'), 14)), ['g/L', 'g/dL', 'mmol/L']);
+  assert.deepEqual(['mg/dl', 'umol/l', 'u/l', 'uiu/ml', 'mu/l', '10⁹/L'].map(prettyUnit), ['mg/dL', 'µmol/L', 'U/L', 'µIU/mL', 'mU/L', '10⁹/L']);
+});

@@ -6,7 +6,7 @@
 
 import { h, go, toast, uid } from './dom.js';
 import { METRICS, CATEGORIES, getMetric, matchMetric, customKey } from './metrics.js';
-import { canConvert, convert } from './units.js';
+import { canConvert, convert, suggestUnits, unitLooksWrong, unitOptions } from './units.js';
 import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME, isDocType, textStatus } from './parse.js';
 import { state, saveReport, statusOf } from './store.js';
 import { fmtNum, fmtRange, todayIso, fmtDate } from './format.js';
@@ -62,8 +62,15 @@ function metricSelect(row, onchange) {
     }));
 }
 
+// Buttons that set the row's unit to a suggested one, with the value it gives.
+function unitChoices(cands, m, onUnit) {
+  return h('div', { class: 'unit-choices' }, cands.map((c) => h('button', { class: 'btn small', type: 'button', onclick: () => onUnit(c.unit) },
+    c.unit, c.v != null ? h('span', { class: 'muted' }, ` → ${fmtNum(+c.v.toPrecision(3))} ${m.unit}`) : null)));
+}
+
 // What the row will be saved as, e.g. "→ 148 g/L · ref 134–167 · ✓ In range".
-function rowPreview(row, reportDate) {
+// `typical`: this person's usual value for the test, to spot a wrong unit.
+function rowPreview(row, reportDate, { typical = null, onUnit = () => {} } = {}) {
   const m = row.metric && !row.metric.startsWith('custom:') ? getMetric(row.metric) : null;
   const pv = parseValue(row.valueRaw);
   const rg = parseRange(row.refRaw);
@@ -72,12 +79,19 @@ function rowPreview(row, reportDate) {
   if (!m) {
     out.push(h('span', null, row.name.trim() ? `Saved as its own test “${row.nameEn && row.nameEn.toLowerCase() !== row.name.trim().toLowerCase() ? `${row.nameEn}” (printed “${row.name.trim()}”)` : `${row.name.trim()}”`}.` : 'Pick a test or type the printed name.'));
   } else if (pv.value != null && !canConvert(row.unit, m)) {
-    return h('div', { class: 'preview warn' }, `Unit “${row.unit}” can’t be converted to ${m.unit}. Check the unit, or the value won’t appear on the chart.`);
+    const sugg = suggestUnits(row.unit, m, pv.value, typical);
+    const all = sugg.length ? sugg : unitOptions(m, pv.value);
+    return h('div', { class: 'preview warn' }, `Unit “${row.unit}” isn’t clear for ${m.name}. `,
+      sugg.length ? 'Did you mean:' : `Units for ${m.name}:`, unitChoices(all, m, onUnit));
   } else if (pv.value != null) {
     const v = convert(pv.value, row.unit, m);
     const lo = convert(rg.low, row.unit, m);
     const hi = convert(rg.high, row.unit, m);
     out.push(h('span', null, `→ ${pv.qualifier}${fmtNum(v)} ${m.unit}`, lo != null || hi != null ? ` · ref ${fmtRange(lo, hi)}` : ''));
+    const wrong = unitLooksWrong(row.unit, m, pv.value, typical);
+    if (wrong.length) {
+      out.push(h('div', { class: 'warn small' }, `Unusual for you — your results are usually about ${fmtNum(+typical.toPrecision(3))} ${m.unit}. Is the unit perhaps:`, unitChoices(wrong, m, onUnit)));
+    }
   } else {
     out.push(h('span', null, `Text result “${pv.text}”`));
   }
@@ -230,6 +244,12 @@ export async function viewEditor(root, id, presetType) {
       h('button', { class: 'btn', type: 'button', onclick: () => { rows.push({ id: uid(), name: '', metric: '', valueRaw: '', unit: '', refRaw: '', flag: '', date: '' }); touch(); renderRows(); rowsBox.lastElementChild?.querySelector('select')?.focus(); } }, '+ Add row')),
     rowsBox));
 
+  // Median of this person's earlier results for a test (other reports), in its canonical unit.
+  const typicalFor = (key) => {
+    const vs = (state.byMetric.get(key)?.pts ?? []).filter((p) => p.v != null && p.o.reportId !== report.id).map((p) => p.v).sort((a, b) => a - b);
+    return vs.length ? vs[Math.floor(vs.length / 2)] : null;
+  };
+
   function renderRows() {
     countEl.textContent = rows.length ? `(${rows.length})` : '';
     if (!rows.length) {
@@ -238,7 +258,8 @@ export async function viewEditor(root, id, presetType) {
     }
     rowsBox.replaceChildren(...rows.map((row) => {
       const preview = h('div');
-      const refresh = () => preview.replaceChildren(rowPreview(row, report.date));
+      const refresh = () => preview.replaceChildren(rowPreview(row, report.date, { typical: typicalFor(row.metric),
+        onUnit: (u) => { row.unit = u; touch(); renderRows(); } }));
       const field = (key, label, attrs = {}) => h('label', { class: 'f-' + key }, h('span', null, label),
         h('input', { type: 'text', value: row[key], ...attrs, oninput: (e) => {
           row[key] = e.target.value;

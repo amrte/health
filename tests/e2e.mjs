@@ -122,6 +122,23 @@ await page.locator('.row-title', { hasText: 'Secret marker' }).waitFor(); // Eng
 await shot('05-report');
 assert.ok(await page.getByText('Mystery marker').isVisible());
 
+step('unit suggestions');
+await page.goto(base + '#/add');
+await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ date: '2026-10-01', lab: 'Unit test lab', results: [
+  { name: 'Hämoglobin', metric: 'hb', value: '14,1', unit: 'gr/dl', ref: '13,5 - 17,5' },
+  { name: 'Hemoglobiini', metric: 'hb', value: '14,6', unit: 'g/l', date: '2026-10-08' }] }) + '\n```');
+await page.getByRole('button', { name: 'Read results' }).click();
+const unclear = page.locator('.row-edit').nth(0);
+await unclear.getByText('Did you mean:').waitFor();
+await unclear.locator('.unit-choices button', { hasText: 'g/dL' }).click();
+assert.equal(await page.locator('.row-edit').nth(0).locator('.f-unit input').inputValue(), 'g/dL');
+assert.match(await page.locator('.row-edit').nth(0).locator('.preview').textContent(), /→ 141 g\/L/);
+const odd = page.locator('.row-edit').nth(1);
+assert.match(await odd.locator('.preview').textContent(), /Unusual for you/);
+await odd.locator('.unit-choices button', { hasText: 'g/dL' }).click();
+assert.match(await page.locator('.row-edit').nth(1).locator('.preview').textContent(), /→ 146 g\/L/);
+await shot('04b-units');
+
 step('cardiology letter from a Claude reply');
 await page.goto(base + '#/add/letter');
 await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ date: '2026-09-01', lab: 'Heart clinic', doctor: 'Dr. Test', specialty: 'Cardiology',
