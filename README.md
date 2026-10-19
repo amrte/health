@@ -101,8 +101,9 @@ first time it opens, it fills itself with a fictional person: a man born in
 on the Data tab. [`dist/health-records.html`](dist/health-records.html) is the
 same app, but starts empty.
 
-Data is stored in the browser for that file, so moving or renaming the file
-starts a fresh, empty app. On iPhone, the Files app only previews HTML
+Data is stored in the browser, not in the file. Browsers may share that
+storage between local files, or tie it to the file's location, so use
+*Export backup* before relying on it. On iPhone, the Files app only previews HTML
 without running it; use the hosted version described below.
 
 ## Using it on iPhone
