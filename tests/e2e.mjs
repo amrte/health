@@ -41,6 +41,7 @@ await page.goto(base + '#/data');
 await page.locator('select').first().selectOption('male');
 await page.getByPlaceholder('e.g. 1985').fill('1980');
 await page.getByRole('button', { name: 'Save profile' }).click();
+await page.getByText('Profile saved').waitFor(); // the write must finish before reloading
 await page.goto(base);
 await page.locator('.findings .finding').first().waitFor();
 await shot('02b-findings');

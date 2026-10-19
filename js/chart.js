@@ -160,7 +160,9 @@ export function lineChart(host, { pts, unit }) {
     wrap.append(h('p', { class: 'muted chart-empty' }, 'No numeric results to chart.'));
     return;
   }
-  let lastW = 0;
+  // Draw now if laid out, and again whenever the width changes.
+  let lastW = wrap.clientWidth;
+  if (lastW) draw();
   new ResizeObserver(() => {
     if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; draw(); }
   }).observe(wrap);
