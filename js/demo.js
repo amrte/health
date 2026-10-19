@@ -89,10 +89,11 @@ export function demoData() {
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
   const { dental, files } = demoDental();
   demoHeartAndLetters(reports, obs);
+  demoBody(reports, obs);
   return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes(), dental, files };
 }
 
-export const DEMO_PROFILE = { sex: 'male', birthYear: 1980 };
+export const DEMO_PROFILE = { sex: 'male', birthYear: 1980, height: 181 };
 
 // Six months of made-up watch data: night-time heart rate, HRV, sleep, steps and
 // 2–4 workouts a week. The last week shows a cold: higher heart rate, lower HRV.
@@ -252,4 +253,33 @@ function demoHeartAndLetters(reports, obs, today = new Date()) {
     diagnoses: ['Subclinical hypothyroidism, to be confirmed', 'Impaired fasting glucose (prediabetes)', 'Low iron stores'],
     recommendations: ['Repeat TSH, free T4 and TPO antibodies in 2–3 months', 'More physical activity and weight control', 'Iron-rich diet; recheck ferritin with the next tests'],
     medications: [] }, []);
+}
+
+// Made-up body composition printouts (Finnish, like a gym's InBody report) and
+// home scale / tape-measure readings, for the fictional man (181 cm).
+function demoBody(reports, obs) {
+  const add = (report, values) => {
+    const r = { id: uid(), type: 'body', files: [], demo: true, note: '', created: new Date().toISOString(), ...report };
+    reports.push(r);
+    for (const [metric, name, valueRaw, unit, refRaw = ''] of values) obs.push({ id: uid(), reportId: r.id, date: r.date, metric, name, valueRaw, unit, refRaw, flag: '' });
+  };
+  const inbody = ([w, smm, fat, pbf, bmi, vfa, ffm, tbw, ecw, prot, min, bmr, whr, pa]) => [
+    ['weight', 'Paino', w, 'kg', '66,8–90,4'], ['muscle_mass', 'Lihasmassa', smm, 'kg', '32,7–40,0'], ['fat_mass', 'Rasvamassa', fat, 'kg', '9,4–18,8'],
+    ['body_fat_pct', 'Rasvaprosentti', pbf, '%', '10–20'], ['bmi', 'Painoindeksi (BMI)', bmi, 'kg/m²', '18,5–25'], ['visceral_fat_area', 'VFA (Visceral fat area)', vfa, 'cm²', '0–100'],
+    ['lean_mass', 'Rasvaton massa', ffm, 'kg', '57,1–69,8'], ['body_water', 'Kehon vesi', tbw, 'L', '42,9–52,5'], ['ecw_tbw', 'ECW/TBW', ecw, '', '0,36–0,39'],
+    ['body_protein', 'Proteiini', prot, 'kg', '11,5–14,1'], ['body_minerals', 'Mineraalit', min, 'kg', '3,97–4,85'], ['bmr', 'Perusaineenvaihdunta', bmr, 'kcal'],
+    ['waist_hip', 'Vyötärö-lantiosuhde', whr, '', '0,80–0,90'], ['phase_angle', 'Koko kehon vaihekulma', pa, '°'],
+  ];
+  const gym = 'Demo gym, Tampere';
+  add({ date: '2024-09-10', lab: gym }, inbody(['88,9', '37,1', '24,6', '27,7', '27,1', '121', '64,3', '47,0', '0,384', '12,7', '4,41', '1745', '0,97', '5,7']));
+  add({ date: '2025-09-16', lab: gym }, inbody(['90,1', '37,0', '25,9', '28,7', '27,5', '128', '64,2', '46,9', '0,385', '12,7', '4,40', '1742', '0,98', '5,6']));
+  add({ date: '2026-04-21', lab: gym, note: 'After four months of gym training twice a week (demo).' }, [
+    ...inbody(['86,2', '37,9', '21,4', '24,8', '26,3', '104', '64,8', '47,4', '0,382', '12,8', '4,46', '1770', '0,95', '5,9']),
+    ['lean_arm_r', 'Oikean käden rasvaton massa', '3,6', 'kg', '3,3–4,4'], ['lean_arm_l', 'Vasemman käden rasvaton massa', '3,5', 'kg', '3,3–4,4'],
+    ['lean_trunk', 'Keskivartalon rasvaton massa', '28,4', 'kg', '25,9–31,7'], ['lean_leg_r', 'Oikean jalan rasvaton massa', '9,8', 'kg', '9,0–11,0'],
+    ['lean_leg_l', 'Vasemman jalan rasvaton massa', '9,9', 'kg', '9,0–11,0'], ['fat_trunk', 'Vartalon rasvamassa', '11,6', 'kg', '4,6–9,1'],
+  ]);
+  for (const [date, w, waist] of [['2025-01-06', '89,4', '100'], ['2025-06-15', '89,8', '101'], ['2026-01-04', '88,7', '99'], ['2026-07-02', '86,0', '97,5'], ['2026-09-28', '85,6', '97']]) {
+    add({ date, lab: 'Own measurement', source: 'manual', note: 'Morning, before breakfast (demo).' }, [['weight', 'Weight', w, 'kg'], ['waist', 'Waist', waist, 'cm']]);
+  }
 }

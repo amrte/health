@@ -122,20 +122,24 @@ async function deleteAll() {
 }
 
 function profileCard() {
-  const p = { sex: state.profile.sex ?? '', birthYear: state.profile.birthYear ?? '' };
+  const p = { sex: state.profile.sex ?? '', birthYear: state.profile.birthYear ?? '', height: state.profile.height ?? '' };
   const thisYear = new Date().getFullYear();
   return h('section', { class: 'card form' },
     h('h2', null, 'Profile'),
-    h('p', { class: 'muted small' }, 'Used only on this device, for guideline limits that differ by sex or age and to calculate eGFR from creatinine.'),
+    h('p', { class: 'muted small' }, 'Used only on this device, for guideline limits that differ by sex or age, to calculate eGFR from creatinine and BMI from your weight.'),
     h('label', null, h('span', null, 'Sex (as used for lab reference values)'),
       h('select', { value: p.sex, onchange: (e) => { p.sex = e.target.value; } },
         h('option', { value: '' }, 'Not set'), h('option', { value: 'female' }, 'Female'), h('option', { value: 'male' }, 'Male'))),
     h('label', null, h('span', null, 'Birth year'),
       h('input', { type: 'text', inputmode: 'numeric', value: String(p.birthYear), placeholder: 'e.g. 1985', oninput: (e) => { p.birthYear = e.target.value; } })),
+    h('label', null, h('span', null, 'Height (cm)'),
+      h('input', { type: 'text', inputmode: 'decimal', value: String(p.height ?? ''), placeholder: 'e.g. 178', oninput: (e) => { p.height = e.target.value; } })),
     h('div', null, h('button', { class: 'btn primary', type: 'button', onclick: async () => {
       const y = Number(p.birthYear);
       if (p.birthYear && !(y > 1900 && y <= thisYear)) { toast('Enter a 4-digit birth year'); return; }
-      await saveProfile({ sex: p.sex, birthYear: p.birthYear ? y : null });
+      const ht = Number(String(p.height).replace(',', '.'));
+      if (p.height && !(ht >= 100 && ht <= 250)) { toast('Enter your height in cm, e.g. 178'); return; }
+      await saveProfile({ ...state.profile, sex: p.sex, birthYear: p.birthYear ? y : null, height: p.height ? ht : null });
       toast('Profile saved');
     } }, 'Save profile')));
 }
@@ -181,7 +185,7 @@ export async function viewData(root) {
   const hasDemo = state.reports.some((r) => r.demo) || state.vaccines.some((v) => v.demo) || state.measures.some((m) => m.source === 'demo') || state.dental.some((v) => v.demo);
   root.append(h('section', { class: 'card' },
     h('h2', null, 'Demo data'),
-    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests and five dental visits. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
+    h('p', null, 'A fictional man born in 1980: seven check-ups from a Finnish, a German and a Ukrainian lab, each in its own language and units, a few vaccinations, blood pressure readings, six months of watch data and results from two DNA tests, five dental visits, heart examinations and body composition measurements. If no profile is set, his sex and birth year are used. Demo records are marked and can be removed in one go.'),
     h('div', { class: 'btn-row' },
       hasDemo
         ? h('button', { class: 'btn', type: 'button', onclick: async () => { await removeDemo(); go('#/data'); } }, 'Remove demo data')

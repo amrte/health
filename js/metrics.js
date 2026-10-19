@@ -6,7 +6,7 @@
 // or to [a, b] for affine conversions (canonical = value × a + b).
 // `not` lists name fragments that rule a match out, e.g. "LDL" for total cholesterol.
 
-import { normUnit, prepareUnits } from './units.js';
+import { normUnit, prepareUnits, canConvert } from './units.js';
 
 export const CATEGORIES = [
   ['cbc', 'Blood count'],
@@ -23,9 +23,12 @@ export const CATEGORIES = [
   ['hormones', 'Hormones'],
   ['coag', 'Coagulation'],
   ['cardio', 'Heart (ECG, Holter, echo)'],
+  ['body', 'Body measurements'],
   ['other', 'Other'],
 ];
 export const CATEGORY_NAME = Object.fromEntries(CATEGORIES);
+// Body values shown on the overview; the rest are on the Body page.
+export const BODY_MAIN = ['weight', 'bmi', 'bmi_calc', 'waist', 'whtr_calc', 'body_fat_pct', 'muscle_mass', 'visceral_fat_area'];
 
 const COUNT = { 'g/l': 1, '/ul': 0.001 }; // 10⁹/L cell counts
 const URINE = ['urin', 'harn', 'сеч', 'моч', 'virtsa'];
@@ -274,6 +277,97 @@ DEFS.push(
     aliases: ['troponin', 'hs troponin', 'troponin t hs', 'troponin i hs', 'hs tnt', 'hs tni', 'hstnt', 'hstni', 'troponiini', 'тропонін', 'тропонин'] },
 );
 
+// Body measurements: scales, tape measure and body composition analysers (InBody,
+// Tanita, Omron…). `highOk` / `lowOk`: being above / below the device's range is
+// not a concern for that value (e.g. more muscle than the reference).
+const KG = { g: 0.001, lb: 0.45359, lbs: 0.45359, кг: 1 };
+const CM = { m: 100, mm: 0.1, in: 2.54, inch: 2.54, см: 1 };
+const LITRE = { l: 1, kg: 1, ml: 0.001 };
+const SEGMENTS = [
+  ['arm_r', 'right arm', ['oikean kaden', 'right arm', 'rechter arm', 'arm rechts', 'права рука', 'правая рука']],
+  ['arm_l', 'left arm', ['vasemman kaden', 'left arm', 'linker arm', 'arm links', 'ліва рука', 'левая рука']],
+  ['trunk', 'trunk', ['keskivartalon', 'vartalon', 'trunk', 'rumpf', 'тулуб', 'туловище']],
+  ['leg_r', 'right leg', ['oikean jalan', 'right leg', 'rechtes bein', 'bein rechts', 'права нога', 'правая нога']],
+  ['leg_l', 'left leg', ['vasemman jalan', 'left leg', 'linkes bein', 'bein links', 'ліва нога', 'левая нога']],
+];
+const SEG_WORDS = SEGMENTS.flatMap(([, , w]) => w).concat(['kaden', 'jalan', 'arm', 'leg', 'bein', 'segment']);
+DEFS.push(
+  { key: 'weight', cat: 'body', name: 'Weight', unit: 'kg', alt: KG,
+    aliases: ['weight', 'body weight', 'paino', 'kehon paino', 'gewicht', 'korpergewicht', 'вага', 'маса тіла', 'вес', 'масса тела'],
+    not: ['suositeltu', 'recommended', 'target', 'ideal', 'empfohlen', 'ziel', 'tavoite', 'рекоменд', 'цільов', 'целев', 'control', 'kontroll', 'контрол'] },
+  { key: 'height', cat: 'body', name: 'Height', unit: 'cm', alt: CM,
+    aliases: ['height', 'body height', 'pituus', 'grosse', 'korpergrosse', 'зріст', 'рост'] },
+  { key: 'bmi', cat: 'body', name: 'BMI (body mass index)', unit: 'kg/m²', alt: { 'kg/m2': 1, bmi: 1 },
+    aliases: ['bmi', 'body mass index', 'painoindeksi', 'body mass index bmi', 'imt', 'індекс маси тіла', 'индекс массы тела'] },
+  { key: 'body_fat_pct', cat: 'body', name: 'Body fat %', unit: '%',
+    aliases: ['body fat', 'body fat percentage', 'percent body fat', 'pbf', 'fat percentage', 'rasvaprosentti', 'kehon rasvaprosentti', 'korperfett', 'korperfettanteil', 'korperfett in', 'fettanteil', 'відсоток жиру', 'вміст жиру', 'процент жира', 'процент жировой массы'],
+    not: ['mass', 'massa', 'masse', 'маса', 'масса', 'visceral', 'viskeraali', 'вісцерал', 'висцерал', ...SEG_WORDS] },
+  { key: 'fat_mass', cat: 'body', name: 'Fat mass', unit: 'kg', alt: KG,
+    aliases: ['fat mass', 'body fat mass', 'rasvamassa', 'kehon rasvamassa', 'fettmasse', 'korperfettmasse', 'жирова маса', 'жировая масса', 'маса жиру', 'масса жира'],
+    not: ['index', 'indeksi', 'fmi', 'free', 'rasvaton', 'fettfrei', 'безжир', 'tavoite', 'target', 'ziel', ...SEG_WORDS] },
+  { key: 'fmi', cat: 'body', name: 'Fat mass index', unit: 'kg/m²', alt: { 'kg/m2': 1 },
+    aliases: ['fat mass index', 'fmi', 'rasvamassaindeksi', 'fettmassenindex', 'індекс жирової маси', 'индекс жировой массы'] },
+  { key: 'visceral_fat_area', cat: 'body', name: 'Visceral fat area', unit: 'cm²', alt: { cm2: 1 }, lowOk: true,
+    aliases: ['visceral fat area', 'vfa', 'vfa visceral fat area', 'viskeraalirasva', 'viskeraalirasvan pinta ala', 'viszeralfettflache', 'viszerale fettflache', 'площа вісцерального жиру', 'площадь висцерального жира'] },
+  { key: 'visceral_fat_level', cat: 'body', name: 'Visceral fat level', unit: '', lowOk: true,
+    aliases: ['visceral fat level', 'visceral fat rating', 'viskeraalirasvataso', 'viszeralfett level', 'viszeralfettwert', 'рівень вісцерального жиру', 'уровень висцерального жира'] },
+  { key: 'muscle_mass', cat: 'body', name: 'Skeletal muscle mass', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['skeletal muscle mass', 'smm', 'muscle mass', 'lihasmassa', 'luustolihasmassa', 'skelettmuskelmasse', 'muskelmasse', 'скелетна м язова маса', 'м язова маса', 'скелетная мышечная масса', 'мышечная масса'],
+    not: ['tavoite', 'target', 'ziel', ...SEG_WORDS] },
+  { key: 'lean_mass', cat: 'body', name: 'Fat-free mass', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['fat free mass', 'ffm', 'lean body mass', 'lbm', 'rasvaton massa', 'fettfreie masse', 'magermasse', 'безжирова маса', 'тощая масса', 'безжировая масса'],
+    not: SEG_WORDS },
+  { key: 'soft_lean', cat: 'body', name: 'Soft lean mass', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['soft lean mass', 'slm', 'pehmyt kudos', 'pehmytkudos', 'weichteilmagermasse', 'м яка безжирова маса'] },
+  { key: 'body_water', cat: 'body', name: 'Total body water', unit: 'L', alt: LITRE,
+    aliases: ['total body water', 'tbw', 'body water', 'kehon vesi', 'kehon kokonaisvesi', 'korperwasser', 'gesamtkorperwasser', 'загальна вода', 'вода в організмі', 'общая вода', 'вода в организме'],
+    not: ['ecw', 'icw', 'solunsis', 'solunulk', 'intra', 'extra', 'ratio', 'suhde', 'verhaltnis'] },
+  { key: 'icw', cat: 'body', name: 'Intracellular water', unit: 'L', alt: LITRE, highOk: true,
+    aliases: ['intracellular water', 'icw', 'solunsisainen vesi', 'intrazellulares wasser', 'внутрішньоклітинна вода', 'внутриклеточная вода'],
+    not: ['ecw', 'ratio', 'suhde'] },
+  { key: 'ecw', cat: 'body', name: 'Extracellular water', unit: 'L', alt: LITRE,
+    aliases: ['extracellular water', 'ecw', 'solunulkoinen vesi', 'extrazellulares wasser', 'позаклітинна вода', 'внеклеточная вода'],
+    not: ['tbw', 'icw', 'ratio', 'suhde'] },
+  { key: 'ecw_tbw', cat: 'body', name: 'ECW/TBW ratio', unit: '',
+    aliases: ['ecw tbw', 'ecw ratio', 'ecw tbw ratio', 'ecw tbw suhde', 'ecw tbw verhaltnis'] },
+  { key: 'body_protein', cat: 'body', name: 'Protein (body)', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['body protein', 'protein', 'proteiini', 'kehon proteiini', 'eiweiss', 'білок', 'белок'] },
+  { key: 'body_minerals', cat: 'body', name: 'Minerals (body)', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['minerals', 'body minerals', 'mineraalit', 'mineralien', 'мінерали', 'минералы'] },
+  { key: 'bone_mineral', cat: 'body', name: 'Bone mineral mass', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['bone mineral content', 'bone mineral mass', 'bone mass', 'bmc', 'luun mineraalimassa', 'luumassa', 'knochenmasse', 'knochenmineralgehalt', 'кісткова маса', 'костная масса'] },
+  { key: 'body_cell_mass', cat: 'body', name: 'Body cell mass', unit: 'kg', alt: KG, highOk: true,
+    aliases: ['body cell mass', 'bcm', 'kehon solumassa', 'solumassa', 'korperzellmasse', 'клітинна маса', 'клеточная масса'] },
+  { key: 'bmr', cat: 'body', name: 'Basal metabolic rate', unit: 'kcal', alt: { kj: 0.239, 'kcal/d': 1, 'kcal/day': 1, 'kcal/vrk': 1, ккал: 1 },
+    aliases: ['basal metabolic rate', 'bmr', 'perusaineenvaihdunta', 'grundumsatz', 'базовий метаболізм', 'основний обмін', 'основной обмен', 'базальный метаболизм'] },
+  { key: 'waist', cat: 'body', name: 'Waist circumference', unit: 'cm', alt: CM,
+    aliases: ['waist', 'waist circumference', 'vyotaro', 'vyotaron ymparys', 'vyotaronymparys', 'taillenumfang', 'bauchumfang', 'обхват талії', 'окружність талії', 'обхват талии', 'окружность талии'],
+    not: ['hip', 'lantio', 'hufte', 'стегон', 'бедер', 'ratio', 'suhde', 'height', 'pituus'] },
+  { key: 'hip', cat: 'body', name: 'Hip circumference', unit: 'cm', alt: CM,
+    aliases: ['hip', 'hip circumference', 'lantio', 'lantion ymparys', 'huftumfang', 'обхват стегон', 'обхват бедер'],
+    not: ['waist', 'vyotaro', 'taille', 'талі', 'тали', 'ratio', 'suhde'] },
+  { key: 'waist_hip', cat: 'body', name: 'Waist-hip ratio', unit: '',
+    aliases: ['waist hip ratio', 'whr', 'waist to hip ratio', 'vyotaro lantiosuhde', 'vyotaro lantio suhde', 'taille hufte verhaltnis', 'waist hip', 'співвідношення талія стегна', 'соотношение талия бедра'] },
+  { key: 'phase_angle', cat: 'body', name: 'Phase angle', unit: '°', alt: { deg: 1, grad: 1 }, highOk: true,
+    aliases: ['phase angle', 'whole body phase angle', 'vaihekulma', 'koko kehon vaihekulma', 'phasenwinkel', 'фазовий кут', 'фазовый угол'] },
+  { key: 'target_weight', cat: 'body', name: 'Recommended weight (device)', unit: 'kg', alt: KG,
+    aliases: ['recommended weight', 'target weight', 'ideal weight', 'suositeltu paino', 'zielgewicht', 'idealgewicht', 'рекомендована вага', 'рекомендуемый вес'] },
+  { key: 'body_age', cat: 'body', name: 'Body age (device)', unit: 'years', alt: { y: 1, v: 1, vuotta: 1, jahre: 1, років: 1, лет: 1 }, lowOk: true,
+    aliases: ['body age', 'metabolic age', 'kehon ika', 'metabolinen ika', 'korperalter', 'metabolisches alter', 'вік тіла', 'метаболічний вік', 'метаболический возраст'] },
+  { key: 'body_score', cat: 'body', name: 'Body score (device)', unit: 'points', alt: { p: 1, pts: 1, pisteet: 1, punkte: 1 }, highOk: true,
+    aliases: ['inbody score', 'body score', 'kehon kokonaispisteet', 'kokonaispisteet', 'gesamtpunktzahl', 'загальний бал'] },
+);
+for (const [k, label, words] of SEGMENTS) {
+  DEFS.push(
+    { key: `lean_${k}`, cat: 'body', seg: 'lean', name: `Lean mass, ${label}`, unit: 'kg', alt: KG, highOk: true,
+      aliases: words.flatMap((w) => [`${w} rasvaton massa`, `lean mass ${w}`, `${w} lean mass`, `magermasse ${w}`, `fettfreie masse ${w}`, `безжирова маса ${w}`]),
+      not: k === 'trunk' ? ['kaden', 'jalan'] : [] },
+    { key: `fat_${k}`, cat: 'body', seg: 'fat', name: `Fat mass, ${label}`, unit: 'kg', alt: KG,
+      aliases: words.flatMap((w) => [`${w} rasvamassa`, `fat mass ${w}`, `${w} fat mass`, `fettmasse ${w}`, `жирова маса ${w}`]),
+      not: ['rasvaton', 'lean', 'mager', 'fettfrei', 'безжир', ...(k === 'trunk' ? ['kaden', 'jalan'] : [])] },
+  );
+}
+
 // White cell differential: each cell type exists as % and as absolute count.
 const DIFF = [
   ['neut', 'Neutrophils', ['neutrophils', 'neutrophil', 'neutrophile', 'neutrophile granulozyten', 'neutrofiilit', 'neut', 'neu', 'ne', 'нейтрофіли', 'нейтрофилы'],
@@ -298,6 +392,8 @@ DEFS.push(
 DEFS.push(
   { key: 'egfr_calc', cat: 'kidney', name: 'eGFR (calculated)', unit: 'mL/min/1.73m²', aliases: [], derived: true },
   { key: 'nonhdl_calc', cat: 'lipids', name: 'Non-HDL cholesterol (calculated)', unit: 'mmol/L', aliases: [], derived: true },
+  { key: 'bmi_calc', cat: 'body', name: 'BMI (calculated)', unit: 'kg/m²', aliases: [], derived: true },
+  { key: 'whtr_calc', cat: 'body', name: 'Waist-to-height ratio (calculated)', unit: '', aliases: [], derived: true },
 );
 
 export const METRICS = DEFS.map(prepareUnits);
@@ -326,6 +422,7 @@ const URINE_SPECIMEN = new Set(['u', 'du', 'pu', 'fu']);
 
 const EXACT = new Map();
 const CONTAINS = [];
+const SAME_NAME = new Map(); // name → every key that uses it
 for (const m of METRICS) {
   m.notN = (m.not ?? []).map(normName).filter(Boolean);
   const names = new Set([m.key, m.name, ...m.aliases].map(normName).filter(Boolean));
@@ -333,9 +430,18 @@ for (const m of METRICS) {
   for (const a of names) {
     if (!EXACT.has(a)) EXACT.set(a, m.key);
     if (a.length >= 3) CONTAINS.push([a, m.key]);
+    if (!SAME_NAME.has(a)) SAME_NAME.set(a, []);
+    SAME_NAME.get(a).push(m.key);
   }
 }
 CONTAINS.sort((a, b) => b[0].length - a[0].length);
+
+// Some names mean different things by unit: "Protein" in g/L is a blood test,
+// in kg it's a body-composition value. Prefer the test whose unit fits.
+function byUnit(alias, key, unit, f) {
+  if (!normUnit(unit) || canConvert(unit, BY_KEY.get(key))) return key;
+  return (SAME_NAME.get(alias) ?? []).find((k) => k !== key && canConvert(unit, BY_KEY.get(k)) && !excluded(BY_KEY.get(k), f)) ?? key;
+}
 
 function excluded(m, n) {
   return m.notN.some((x) => n.includes(x));
@@ -368,12 +474,12 @@ export function matchMetric(name, unit = '', value = null) {
   let key = null;
   for (const f of forms) {
     const k = EXACT.get(f);
-    if (k && !excluded(BY_KEY.get(k), f)) { key = k; break; }
+    if (k && !excluded(BY_KEY.get(k), f)) { key = byUnit(f, k, unit, f); break; }
   }
   for (const f of key ? [] : forms) {
     const padded = ` ${f} `;
     const hit = CONTAINS.find(([a, k]) => padded.includes(` ${a} `) && !excluded(BY_KEY.get(k), f));
-    if (hit) { key = hit[1]; break; }
+    if (hit) { key = byUnit(hit[0], hit[1], unit, f); break; }
   }
   return key ? pickVariant(key, raw, unit, value) : null;
 }

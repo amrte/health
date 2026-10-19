@@ -24,6 +24,7 @@ const SECTIONS = [
   ['Blood pressure', '#/bp', 'blood pressure bp hypertension тиск артеріальний гіпертонія'],
   ['Vaccinations', '#/vaccines', 'vaccines vaccinations immunisation booster вакцини щеплення ревакцинація'],
   ['DNA', '#/dna', 'dna genetics 23andme tellmegen genome днк генетика геном'],
+  ['Body', '#/body', 'body weight waist bmi body composition fat muscle inbody tanita scale тіло вага талія жир м’язи склад тіла'],
   ['Teeth', '#/teeth', 'teeth dental dentist tooth x-ray bill filling crown зуби стоматолог зуб рентген пломба коронка'],
   ['Heart', '#/heart', 'heart cardiology ecg ekg holter echo echocardiogram серце кардіологія екг холтер ехо'],
   ['Discuss with Claude', '#/discuss', 'discuss claude ask question summary обговорити запитати claude'],

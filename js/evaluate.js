@@ -66,15 +66,20 @@ export function generalFindings(key, entry, now = Date.now()) {
   const out = [];
   const range = (p) => fmtRange(p.lo, p.hi) + (unit ? ` ${unit}` : '');
 
-  if (last.status === 'high' || last.status === 'low') {
+  const source = m.cat === 'body' ? 'device' : 'lab';
+  const harmless = (last.status === 'high' && m.highOk) || (last.status === 'low' && m.lowOk);
+  if (harmless) {
+    out.push({ keys: [key], level: 'good', kind: 'range', title: `${m.name} ${last.status === 'high' ? 'above' : 'below'} the device’s range`,
+      text: `Latest ${fmtNum(last.v ?? last.raw)} ${unit} vs. ${range(last)}. ${last.status === 'high' ? 'More than the reference' : 'Less than the reference'} is not a concern for this value.`, sources: [] });
+  } else if (last.status === 'high' || last.status === 'low') {
     let n = 1;
     for (let i = pts.length - 2; i >= 0 && pts[i].status === last.status; i--) n++;
     const word = last.status === 'high' ? 'above' : 'below';
     out.push({
-      keys: [key], level: 'attention', kind: 'range',
-      title: `${m.name} ${word} the lab’s range`,
+      keys: [key], level: m.cat === 'body' ? 'info' : 'attention', kind: 'range',
+      title: `${m.name} ${word} the ${source}’s range`,
       text: (last.lo != null || last.hi != null ? `Latest ${fmtNum(last.v ?? last.raw)} ${unit} vs. reference ${range(last)}. ` : 'Marked by the lab as out of range. ') +
-        (n > 1 ? `It was ${word} the range in the last ${n} tests in a row.` : 'One result out of range can be a fluctuation; repeat tests show whether it persists.'),
+        (n > 1 ? `It was ${word} the range in the last ${n} ${source === 'lab' ? 'tests' : 'measurements'} in a row.` : source === 'lab' ? 'One result out of range can be a fluctuation; repeat tests show whether it persists.' : 'Devices use their own reference ranges, and hydration and the time of day affect the reading. Compare measurements made the same way.'),
       sources: [],
     });
   }
@@ -110,7 +115,7 @@ export function generalFindings(key, entry, now = Date.now()) {
   }
 
   // An out-of-range result that hasn't been re-checked for a long time.
-  if ((last.status === 'high' || last.status === 'low') && now - last.t > 2 * YEAR) {
+  if ((last.status === 'high' || last.status === 'low') && !harmless && now - last.t > 2 * YEAR) {
     out.push({ keys: [key], level: 'info', kind: 'age', title: `${m.name}: last result is ${Math.floor((now - last.t) / YEAR)} years old`,
       text: 'It was out of range then. A new test would show where it is now.', sources: [] });
   }

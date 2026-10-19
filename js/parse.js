@@ -73,16 +73,20 @@ export const REPORT_TYPES = [
   ['ecg', 'ECG'],
   ['holter', 'Long-term ECG (Holter)'],
   ['echo', 'Echocardiogram'],
+  ['body', 'Body composition / measurements'],
   ['letter', 'Doctor’s letter or statement'],
   ['other', 'Other medical document'],
 ];
 export const REPORT_TYPE_NAME = Object.fromEntries(REPORT_TYPES);
+// Types that get a summary, diagnoses and follow-up besides the values.
+export const isDocType = (type) => type !== 'lab' && type !== 'body';
 
 const WHAT = {
   lab: 'medical lab report(s)',
   ecg: 'ECG report(s) or ECG printout(s)',
   holter: 'long-term ECG (Holter) report(s)',
   echo: 'echocardiography report(s)',
+  body: 'body composition report(s) (e.g. InBody, Tanita) or body measurements',
   letter: 'doctor’s letter(s), statement(s) or discharge summary',
   other: 'medical document(s)',
 };
@@ -90,22 +94,26 @@ const WHAT = {
 // Instructions for Claude. Every type extracts measured values; letters and heart
 // reports also get a plain-language summary, diagnoses, advice and follow-up.
 export function buildPrompt(type = 'lab') {
-  const cats = type === 'lab' ? CATEGORIES.filter(([c]) => c !== 'cardio') : type === 'letter' || type === 'other' ? CATEGORIES : CATEGORIES.filter(([c]) => c === 'cardio');
+  const only = { lab: (c) => c !== 'cardio' && c !== 'body', body: (c) => c === 'body', letter: () => true, other: () => true }[type] ?? ((c) => c === 'cardio');
+  const cats = CATEGORIES.filter(([c]) => only(c));
   const list = cats.map(([cat, title]) => {
     const keys = METRICS.filter((m) => m.cat === cat && !m.derived).map((m) => `${m.key} = ${m.name}`);
     return keys.length ? `${title}: ${keys.join('; ')}` : '';
   }).filter(Boolean).join('\n');
-  const doc = type !== 'lab';
+  const doc = isDocType(type);
   return `Read the attached ${WHAT[type] ?? WHAT.other}. They may be in English, German, Finnish, Ukrainian or Russian.
 ${doc ? 'Summarise the document and extract every measured value' : 'Extract every test result'} and reply with only one JSON code block in this format:
 
-{"date": "YYYY-MM-DD", "lab": "${doc ? 'clinic or hospital' : 'lab or clinic name'}",${doc ? ` "doctor": "doctor's name", "specialty": "e.g. cardiology", "summary": "3–6 plain-language sentences in English: why it was done, what was found, what was concluded", "conclusion": "the document's own conclusion or rhythm description, translated to English", "diagnoses": ["…"], "recommendations": ["…"], "medications": ["name dose schedule"], "follow_up": "YYYY-MM-DD if a follow-up or control date is given, else empty",` : ''} "results": [
+{"date": "YYYY-MM-DD", "lab": "${doc ? 'clinic or hospital' : type === 'body' ? 'place or device, e.g. gym name or InBody' : 'lab or clinic name'}",${doc ? ` "doctor": "doctor's name", "specialty": "e.g. cardiology", "summary": "3–6 plain-language sentences in English: why it was done, what was found, what was concluded", "conclusion": "the document's own conclusion or rhythm description, translated to English", "diagnoses": ["…"], "recommendations": ["…"], "medications": ["name dose schedule"], "follow_up": "YYYY-MM-DD if a follow-up or control date is given, else empty",` : ''} "results": [
   {"name": "name exactly as printed", "metric": "key from the list below or null", "value": "result as printed", "unit": "unit as printed", "ref": "reference range as printed", "flag": "H, L or empty", "date": "YYYY-MM-DD, only if this row has its own date"}
 ]}
 
 Rules:
 - Copy values, units and reference ranges exactly as printed. Do not convert units. Decimal commas are fine.
-- One entry per result. If a value is shown for several dates, add one entry per date with that row's "date".${type === 'lab' ? '\n- White cell types come as percent and as absolute count: use the _pct key for % and the _abs key for counts.\n- Use the sample date (when the blood was taken) for "date", not the print date.' : ''}${type === 'holter' ? '\n- For extra beats give both the count (pvc_count, pac_count) and the share of all beats in % (pvc_pct, pac_pct) when shown. If atrial fibrillation is reported, give af_burden in %; if the report says there was none, give 0.' : ''}${doc ? '\n- Don’t interpret beyond the document; keep diagnoses and advice as the doctor wrote them.' : ''}
+- One entry per result. If a value is shown for several dates, add one entry per date with that row's "date".${type === 'lab' ? '\n- White cell types come as percent and as absolute count: use the _pct key for % and the _abs key for counts.\n- Use the sample date (when the blood was taken) for "date", not the print date.' : ''}${type === 'body' ? `
+- Many body composition reports print the previous measurement next to the current one. Use the line "change since the previous measurement" (e.g. "Muutos edelliseen mittaukseen", "Veränderung") to tell which value is current. Give current values with the report date; give a previous value as its own entry only if its date is printed, otherwise leave it out.
+- "ref": the device's normal range for that value, e.g. "62–83.8". The two numbers under a bar are usually its range.
+- For segmental values (arms, trunk, legs) give the mass in kg; leave out the percentages of the reference shown under them. Leave out calorie tables for activities, and goals such as "fat mass target".` : ''}${type === 'holter' ? '\n- For extra beats give both the count (pvc_count, pac_count) and the share of all beats in % (pvc_pct, pac_pct) when shown. If atrial fibrillation is reported, give af_burden in %; if the report says there was none, give 0.' : ''}${doc ? '\n- Don’t interpret beyond the document; keep diagnoses and advice as the doctor wrote them.' : ''}
 - Leave out personal data (name, address, insurance number). Don't add anything that is not in the document.
 - "metric": the best matching key from this list, or null if none fits:
 ${list}`;

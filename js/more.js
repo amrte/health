@@ -6,6 +6,7 @@ import { pageHead } from './ui.js';
 const ITEMS = [
   ['#/search', 'Search', 'Tests, findings, vaccines, DNA, sections'],
   ['#/heart', 'Heart', 'ECG, long-term ECG, echocardiogram, cardiology letters'],
+  ['#/body', 'Body', 'Weight, waist, body composition (InBody, Tanita)'],
   ['#/teeth', 'Teeth', 'Tooth chart, treatments, bills, X-rays'],
   ['#/bp', 'Blood pressure', 'Readings and home averages'],
   ['#/dna', 'DNA', '23andMe and tellmeGen raw data'],

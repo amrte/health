@@ -29,7 +29,7 @@ function synthetic(metric, src, value, unit) {
 }
 
 // Builds calculated observations from points already converted to canonical units.
-// `series(key)` returns a metric's points; `profile` has sex and birthYear.
+// `series(key)` returns a metric's points; `profile` has sex, birthYear and height (cm).
 export function calculatedObs(series, profile = {}) {
   const out = [];
   const hasLab = (key, date) => series(key).some((p) => p.o.date === date && p.v != null);
@@ -40,6 +40,20 @@ export function calculatedObs(series, profile = {}) {
       const age = Number(p.o.date.slice(0, 4)) - profile.birthYear;
       const v = ckdEpi2021(p.v, age, profile.sex);
       if (v != null) out.push(synthetic('egfr_calc', p, Math.round(v), 'mL/min/1.73m²'));
+    }
+  }
+
+  // BMI and waist-to-height ratio need a height: the profile's, else the latest measured one.
+  const measured = series('height').filter((p) => p.v != null).at(-1)?.v;
+  const height = Number(profile.height) || measured;
+  if (height >= 100 && height <= 250) {
+    const m = height / 100;
+    for (const p of series('weight')) {
+      if (p.v == null || hasLab('bmi', p.o.date)) continue;
+      out.push(synthetic('bmi_calc', p, Math.round((p.v / (m * m)) * 10) / 10, 'kg/m²'));
+    }
+    for (const p of series('waist')) {
+      if (p.v != null) out.push(synthetic('whtr_calc', p, Math.round((p.v / height) * 100) / 100, ''));
     }
   }
 

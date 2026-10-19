@@ -78,6 +78,12 @@ export const SOURCES = {
     title: 'Guidelines for the diagnosis and treatment of acute and chronic heart failure (Eur Heart J 2021;42:3599)', url: 'https://doi.org/10.1093/eurheartj/ehab368' },
   ase2015: { short: 'ASE/EACVI 2015', org: 'American Society of Echocardiography / EACVI', year: 2015,
     title: 'Recommendations for cardiac chamber quantification by echocardiography in adults', url: 'https://academic.oup.com/ehjcimaging/article/16/3/233/2400086' },
+  who_bmi: { short: 'WHO Europe', org: 'World Health Organization, Regional Office for Europe', year: null,
+    title: 'A healthy lifestyle – WHO recommendations (BMI classification for adults)', url: 'https://www.who.int/europe/news-room/fact-sheets/item/a-healthy-lifestyle---who-recommendations' },
+  who2008waist: { short: 'WHO 2008', org: 'World Health Organization', year: 2008,
+    title: 'Waist circumference and waist–hip ratio: report of a WHO expert consultation (published 2011)', url: 'https://www.who.int/publications/i/item/9789241501491' },
+  nice246: { short: 'NICE NG246', org: 'National Institute for Health and Care Excellence', year: 2025,
+    title: 'Overweight and obesity management: identifying and assessing overweight, obesity and central adiposity', url: 'https://www.nice.org.uk/guidance/ng246/chapter/Identifying-and-assessing-overweight-obesity-and-central-adiposity' },
   nice239: { short: 'NICE NG239', org: 'National Institute for Health and Care Excellence', year: 2024,
     title: 'Vitamin B12 deficiency in over 16s: diagnosis and management', url: 'https://www.nice.org.uk/guidance/ng239' },
 };
@@ -542,6 +548,102 @@ function egfrRule(p, c, key) {
 }
 
 // ---- patterns across tests ---------------------------------------------------
+
+// ---- Body measurements ----------------------------------------------------------
+
+function bmiRule(p) {
+  const b = p.v;
+  const muscle = ' BMI doesn’t tell fat from muscle; with a lot of muscle it overstates body fat — the waist measure and body fat % help here.';
+  if (b < 18.5) return F('attention', `BMI ${fmtNum(b)}: underweight`, 'Below 18.5 kg/m², which WHO classes as underweight.', ['who_bmi']);
+  if (b < 25) return F('good', `BMI ${fmtNum(b)}: healthy range`, 'Within 18.5–24.9 kg/m² (WHO).', ['who_bmi']);
+  if (b < 30) return F('info', `BMI ${fmtNum(b)}: overweight`, 'WHO classes 25–29.9 kg/m² as overweight (pre-obesity).' + muscle, ['who_bmi']);
+  const cls = b < 35 ? 'I' : b < 40 ? 'II' : 'III';
+  return F('attention', `BMI ${fmtNum(b)}: obesity class ${cls}`, `WHO classes ${cls === 'I' ? '30–34.9' : cls === 'II' ? '35–39.9' : '40 or more'} kg/m² as obesity class ${cls}. Worth discussing with a doctor, together with blood pressure, lipids and HbA1c.`, ['who_bmi']);
+}
+const BMI_KB = {
+  about: 'Body mass index: weight in kg divided by height in metres squared. A quick screen for under- and overweight in adults.',
+  thresholds: [
+    { label: 'Underweight', value: '< 18.5 kg/m²', source: 'who_bmi' },
+    { label: 'Healthy range', value: '18.5–24.9 kg/m²', source: 'who_bmi' },
+    { label: 'Overweight (pre-obesity)', value: '25–29.9 kg/m²', source: 'who_bmi' },
+    { label: 'Obesity class I / II / III', value: '30–34.9 / 35–39.9 / ≥ 40 kg/m²', source: 'who_bmi' },
+  ],
+  note: 'Lower cut-offs are used for people of South Asian, Chinese and some other Asian backgrounds. BMI overstates fat in very muscular people.',
+  sources: ['who_bmi', 'nice246'],
+  pubmed: 'body mass index mortality',
+  rules: [bmiRule],
+};
+
+Object.assign(KB, {
+  bmi: BMI_KB,
+  bmi_calc: { ...BMI_KB, about: BMI_KB.about + ' Calculated here from your weight and the height in your profile.' },
+  waist: {
+    about: 'Waist circumference shows fat around the belly, which is more closely tied to diabetes and heart disease than weight alone. Measure midway between the lowest rib and the top of the hip bone, after breathing out.',
+    thresholds: [
+      { label: 'Increased risk, men / women', value: '≥ 94 cm / ≥ 80 cm', source: 'who2008waist' },
+      { label: 'Substantially increased risk, men / women', value: '≥ 102 cm / ≥ 88 cm', source: 'who2008waist' },
+    ],
+    note: 'These cut-offs are for European populations; lower ones are used for some Asian populations.',
+    sources: ['who2008waist'],
+    pubmed: 'waist circumference cardiovascular risk',
+    rules: [(p, c) => {
+      if (!c.sex) return null;
+      const [a, b] = c.sex === 'male' ? [94, 102] : [80, 88];
+      if (p.v >= b) return F('attention', `Waist ${v(p.v, 'cm')}: substantially increased risk`, `At or above ${b} cm, the level WHO links to a substantially increased risk of metabolic complications for ${c.sex === 'male' ? 'men' : 'women'}.`, ['who2008waist']);
+      if (p.v >= a) return F('info', `Waist ${v(p.v, 'cm')}: increased risk`, `At or above ${a} cm, the level WHO links to an increased risk for ${c.sex === 'male' ? 'men' : 'women'} (substantially increased from ${b} cm).`, ['who2008waist']);
+      return F('good', `Waist ${v(p.v, 'cm')}: below the risk threshold`, `Below ${a} cm (WHO, ${c.sex === 'male' ? 'men' : 'women'}).`, ['who2008waist']);
+    }],
+  },
+  whtr_calc: {
+    about: 'Waist circumference divided by height. NICE’s simple rule: keep your waist below half your height. Calculated here from your waist and the height in your profile.',
+    thresholds: [
+      { label: 'Healthy', value: '0.4–0.49', source: 'nice246' },
+      { label: 'Increased central fat', value: '0.5–0.59', source: 'nice246' },
+      { label: 'High central fat', value: '≥ 0.6', source: 'nice246' },
+    ],
+    note: 'For adults with a BMI under 35, both sexes and all ethnic backgrounds, including people with a lot of muscle.',
+    sources: ['nice246'],
+    pubmed: 'waist-to-height ratio',
+    rules: [(p) => {
+      if (p.v >= 0.6) return F('attention', `Waist-to-height ratio ${fmtNum(p.v)}: high`, '0.6 or more is what NICE calls high central adiposity, with further increased risk of type 2 diabetes, high blood pressure and heart disease.', ['nice246']);
+      if (p.v >= 0.5) return F('info', `Waist-to-height ratio ${fmtNum(p.v)}: increased`, '0.5–0.59 is what NICE calls increased central adiposity. The aim is a waist below half your height.', ['nice246']);
+      if (p.v >= 0.4) return F('good', `Waist-to-height ratio ${fmtNum(p.v)}: healthy`, 'Below 0.5 — your waist is less than half your height (NICE).', ['nice246']);
+      return null;
+    }],
+  },
+  body_fat_pct: {
+    about: 'Share of body weight that is fat, estimated by bioimpedance (a weak current through the body) or other methods. There is no single guideline range; each device uses its own, usually by sex and age.',
+    note: 'Readings vary with hydration, meals, exercise and time of day. Compare measurements made on the same device under the same conditions.',
+    sources: [],
+    pubmed: 'body fat percentage bioelectrical impedance',
+  },
+  visceral_fat_area: {
+    about: 'Estimated area of fat around the organs inside the belly, in cm² at waist level. Visceral fat is the type most closely tied to metabolic risk. Body composition devices commonly use 100 cm² as their upper limit.',
+    note: 'Bioimpedance only estimates visceral fat; CT or MRI measure it directly.',
+    sources: [],
+    pubmed: 'visceral fat area bioelectrical impedance',
+  },
+  muscle_mass: {
+    about: 'Mass of the muscles attached to the skeleton (arms, legs, trunk), estimated by the device. Keeping it up with strength training matters more with age.',
+    sources: [],
+    pubmed: 'skeletal muscle mass health outcomes',
+  },
+  phase_angle: {
+    about: 'A bioimpedance value that reflects cell health and cell mass; higher is generally better. It falls with age and illness.',
+    sources: [],
+    pubmed: 'phase angle bioelectrical impedance',
+  },
+  ecw_tbw: {
+    about: 'Share of body water outside the cells. A higher value can mean fluid retention or swelling. Each device prints its own balanced range.',
+    sources: [],
+    pubmed: 'extracellular water total body water ratio',
+  },
+  weight: {
+    about: 'Body weight. Weigh at the same time of day, ideally in the morning before eating, to compare readings. Unexplained weight loss is worth discussing with a doctor.',
+    sources: [],
+    pubmed: 'body weight change mortality',
+  },
+});
 
 export const PATTERNS = [
   // Glucose and HbA1c both in the diabetes range around the same time.

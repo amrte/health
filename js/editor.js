@@ -7,7 +7,7 @@
 import { h, go, toast, uid } from './dom.js';
 import { METRICS, CATEGORIES, getMetric, matchMetric, customKey } from './metrics.js';
 import { canConvert, convert } from './units.js';
-import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME } from './parse.js';
+import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME, isDocType } from './parse.js';
 import { state, saveReport, statusOf } from './store.js';
 import { fmtNum, fmtRange, todayIso, fmtDate } from './format.js';
 import { pageHead, statusChip, thumb, openFile } from './ui.js';
@@ -118,7 +118,7 @@ export async function viewEditor(root, id, presetType) {
     (docInputs[key] = multi
       ? h('textarea', { rows: 3, value: (report[key] ?? []).join('\n'), placeholder: 'One per line', oninput: (e) => { report[key] = e.target.value.split('\n').map((x) => x.trim()).filter(Boolean); touch(); } })
       : h(key === 'summary' || key === 'conclusion' ? 'textarea' : 'input', { type: key === 'followUp' ? 'date' : 'text', rows: 3, value: report[key] ?? '', oninput: (e) => { report[key] = e.target.value; touch(); } })));
-  const docBox = h('details', { class: 'doc-fields', hidden: report.type === 'lab', open: !!(report.summary || report.diagnoses?.length) },
+  const docBox = h('details', { class: 'doc-fields', hidden: !isDocType(report.type), open: !!(report.summary || report.diagnoses?.length) },
     h('summary', null, 'Summary, diagnoses, advice and follow-up', h('span', { class: 'muted small' }, ' — Claude fills these in')),
     h('div', { class: 'bp-row2' }, docField('doctor', 'Doctor'), docField('specialty', 'Specialty')),
     docField('summary', 'Summary'),
@@ -135,7 +135,7 @@ export async function viewEditor(root, id, presetType) {
   root.append(h('section', { class: 'card form' },
     h('label', null, h('span', null, 'Type'), h('select', { value: report.type, onchange: (e) => {
       report.type = e.target.value;
-      docBox.hidden = report.type === 'lab';
+      docBox.hidden = !isDocType(report.type);
       copyBtn.textContent = 'Copy instructions';
       touch();
     } }, REPORT_TYPES.map(([k, n]) => h('option', { value: k }, n)))),
@@ -198,7 +198,7 @@ export async function viewEditor(root, id, presetType) {
       const res = parseExtraction(replyIn.value);
       if (res.date && (!existing || !rows.length)) { report.date = res.date; dateIn.value = res.date; }
       if (res.lab && !report.lab) { report.lab = res.lab; labIn.value = res.lab; }
-      if (report.type !== 'lab') fillDoc(res.doc);
+      if (isDocType(report.type)) fillDoc(res.doc);
       for (const r of res.rows) {
         if (r.date === report.date) r.date = '';
         rows.push({ id: uid(), ...r, metric: r.metric || (r.name ? customKey(r.name) : '') });
@@ -206,7 +206,7 @@ export async function viewEditor(root, id, presetType) {
       replyIn.value = '';
       touch();
       renderRows();
-      toast(report.type === 'lab' ? `${res.rows.length} results added — check them below` : `Summary and ${res.rows.length} values added — check them`);
+      toast(!isDocType(report.type) ? `${res.rows.length} results added — check them below` : `Summary and ${res.rows.length} values added — check them`);
       rowsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
       toast(err instanceof SyntaxError ? 'The reply isn’t complete JSON. Copy the whole code block.' : err.message);

@@ -1,7 +1,7 @@
 // Overview, test detail, report list and report detail screens.
 
 import { h, go, toast } from './dom.js';
-import { CATEGORIES, CATEGORY_NAME } from './metrics.js';
+import { CATEGORIES, CATEGORY_NAME, BODY_MAIN } from './metrics.js';
 import { state, matches, metricSearchText, reportSearchText, reportPoints, deleteReport, findingsFor } from './store.js';
 import { findingsCard, findingItem, aboutCard } from './insights.js';
 import { discussButton } from './discuss.js';
@@ -133,15 +133,22 @@ export function viewOverview(root) {
         h('h2', null, 'Due and overdue'),
         h('div', { class: 'card list' }, follow, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
     }
-    const flagged = entries.filter((e) => e.last.status === 'high' || e.last.status === 'low');
+    const harmless = (e) => (e.last.status === 'high' && e.m.highOk) || (e.last.status === 'low' && e.m.lowOk);
+    const flagged = entries.filter((e) => (e.last.status === 'high' || e.last.status === 'low') && !harmless(e));
     if (flagged.length && !overviewQuery) {
       out.push(h('section', { class: 'group wide' },
         h('h2', null, 'Out of range at last test'),
         h('div', { class: 'card list' }, flagged.map(metricRow))));
     }
     for (const [cat, title] of CATEGORIES) {
-      const items = entries.filter((e) => e.m.cat === cat).sort((a, b) => a.m.name.localeCompare(b.m.name));
-      if (items.length) out.push(h('section', { class: 'group' }, h('h2', null, title), h('div', { class: 'card list' }, items.map(metricRow))));
+      let items = entries.filter((e) => e.m.cat === cat).sort((a, b) => a.m.name.localeCompare(b.m.name));
+      // Body composition reports bring dozens of values; the overview shows the main ones.
+      const more = cat === 'body' && !overviewQuery ? items.length - items.filter((e) => BODY_MAIN.includes(e.m.key)).length : 0;
+      if (more) items = items.filter((e) => BODY_MAIN.includes(e.m.key));
+      if (items.length || more) {
+        out.push(h('section', { class: 'group' }, h('h2', null, title), h('div', { class: 'card list' }, items.map(metricRow),
+          more ? h('a', { class: 'row', href: '#/body' }, h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, `All body measurements (${more} more)`))) : null)));
+      }
     }
     if (overviewQuery) {
       const reps = state.reports.filter((r) => matches(overviewQuery, reportSearchText(r))).sort((a, b) => b.date.localeCompare(a.date));
@@ -163,7 +170,7 @@ export function viewMetric(root, key) {
   }
   const { m, pts, last } = entry;
   const unit = m.unit;
-  root.append(pageHead(m.name, { back: '#/', sub: CATEGORY_NAME[m.cat] + (m.custom ? ' · not in the test catalogue' : '') }));
+  root.append(pageHead(m.name, { back: m.cat === 'body' ? '#/body' : '#/', sub: CATEGORY_NAME[m.cat] + (m.custom ? ' · not in the test catalogue' : '') }));
   // Side by side on wide screens: latest value on the left, findings on the right.
   root.append(h('div', { class: 'split' },
     h('div', { class: 'stack' },
@@ -221,13 +228,13 @@ let reportsFilter = 'all';
 
 export function viewReports(root) {
   const list = h('div', { class: 'card list' });
-  root.append(pageHead('Records', { sub: 'Lab results, ECGs, echocardiograms and doctor letters',
+  root.append(pageHead('Records', { sub: 'Lab results, ECGs, echocardiograms, body measurements and doctor letters',
     actions: [h('a', { class: 'btn', href: '#/add/letter' }, '+ Letter'), h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report')] }));
   if (!state.reports.length) {
     root.append(emptyState());
     return;
   }
-  const filters = [['all', 'All'], ['lab', 'Lab results'], ['heart', 'Heart'], ['letter', 'Letters']];
+  const filters = [['all', 'All'], ['lab', 'Lab results'], ['heart', 'Heart'], ['body', 'Body'], ['letter', 'Letters']];
   const pills = h('div', { class: 'pills', role: 'group', 'aria-label': 'Show' });
   const renderPills = () => pills.replaceChildren(...filters.map(([k, label]) => h('button', { type: 'button', class: 'pill', 'aria-pressed': String(reportsFilter === k),
     onclick: () => { reportsFilter = k; renderPills(); render(); } }, label)));

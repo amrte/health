@@ -152,6 +152,25 @@ works offline.
 - The Heart page brings together the findings, the heart records, the values,
   blood pressure and heart-related blood tests.
 
+**Body measurements**
+- Weight, height, waist and hip, BMI, body fat, fat and muscle mass,
+  visceral fat, body water (ECW/TBW), protein, minerals, basal metabolic
+  rate, phase angle and lean and fat mass per arm, leg and trunk.
+- Claude reads body composition printouts (InBody, Tanita, gym or clinic
+  reports such as Oma Puhti) in any of the five languages. Where a printout
+  shows the previous value next to the current one, Claude keeps only the
+  current value unless the previous date is printed. Device ranges are kept as
+  the reference.
+- Quick entry for weight, waist, hip and body fat from a scale or tape measure.
+- With the height in the profile, BMI and the waist-to-height ratio are
+  calculated.
+- Rules and their sources:
+  - BMI classes (WHO)
+  - waist ≥94/102 cm for men and ≥80/88 cm for women (WHO 2008)
+  - waist-to-height ratio 0.5 and 0.6 (NICE NG246)
+- Values above the device's range where more is better (muscle, lean mass,
+  phase angle) are not flagged.
+
 **Search**
 - Searches everything:
   - tests, including their names in English, German, Finnish, Ukrainian and
@@ -268,6 +287,7 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/fitness.js`, `js/fitness-eval.js` | Fitness screen and findings |
 | `js/bp.js`, `js/bp-eval.js` | Blood pressure entry, import, chart, ESC/ESH evaluation |
 | `js/genome.js`, `js/dna-variants.js`, `js/dna.js`, `js/dna-eval.js` | Raw DNA reader, curated variants, DNA screen, DNA + lab findings |
+| `js/body.js` | Body page: weight, waist, body composition, quick entry |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
 Results are stored as printed (value, unit and range as text) and are parsed

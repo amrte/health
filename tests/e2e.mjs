@@ -129,6 +129,30 @@ await page.getByText('QTc prolonged').waitFor();
 assert.ok(await page.getByText('PVC burden 12.5 %').isVisible());
 await shot('05b-heart');
 
+step('body measurements');
+await page.goto(base + '#/body');
+await page.locator('.tiles .tile').first().waitFor();
+assert.ok(await page.getByText('Waist-to-height ratio 0.54: increased').isVisible(), 'NICE rule from the demo waist and profile height');
+assert.ok(await page.locator('.chart svg').first().isVisible(), 'weight chart');
+await page.getByLabel('Weight in kg').fill('84,9');
+await page.getByLabel('Waist in cm').fill('96');
+await page.getByRole('button', { name: 'Save measurement' }).click();
+await page.getByText('Saved 84.9 kg, 96 cm').waitFor();
+await page.locator('.tiles .tile').first().getByText('84.9').waitFor();
+await shot('05c-body');
+await page.goto(base + '#/add/body');
+assert.ok(await page.locator('details.doc-fields').isHidden(), 'no letter fields for body measurements');
+await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ date: '2025-06-11', lab: 'Test gym', results: [
+  { name: 'Paino', metric: 'weight', value: '79,8', unit: 'kg', ref: '62–83,8' }, { name: 'Proteiini', metric: null, value: '13,2', unit: 'kg', ref: '11–13,4' }] }) + '\n```');
+await page.getByRole('button', { name: 'Read results' }).click();
+await page.locator('.row-edit').nth(1).waitFor();
+assert.equal(await page.locator('.row-edit').nth(1).locator('select').inputValue(), 'body_protein', 'protein in kg is the body value');
+await page.getByRole('button', { name: 'Save', exact: true }).click();
+await page.getByText('Test gym').first().waitFor();
+await page.goto(base + '#/test/muscle_mass');
+await page.getByText('About this test').waitFor();
+assert.equal(await page.locator('.page-head .back').getAttribute('href'), '#/body');
+
 step('vaccinations from a Claude reply');
 await page.goto(base + '#/vaccines/add');
 await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ vaccinations: [

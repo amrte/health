@@ -14,6 +14,7 @@ import { viewSearch } from './search.js';
 import { viewDental, viewTooth, viewDentalVisit, viewDentalEditor, dentalDirty, clearDentalDirty } from './dental.js';
 import { viewMore } from './more.js';
 import { viewHeart } from './heart.js';
+import { viewBody } from './body.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -23,6 +24,7 @@ const ROUTES = [
   [/^#\/report\/(.+)$/, (root, id) => viewReport(root, id), 'reports'],
   [/^#\/add(?:\/([a-z]+))?$/, (root, type) => viewEditor(root, null, type), 'reports'],
   [/^#\/heart$/, (root) => viewHeart(root), 'heart'],
+  [/^#\/body$/, (root) => viewBody(root), 'body'],
   [/^#\/fitness$/, (root) => viewFitness(root), 'fitness'],
   [/^#\/bp$/, (root) => viewBp(root), 'fitness'],
   [/^#\/dna$/, (root) => viewDna(root), 'reports'],
@@ -59,7 +61,7 @@ async function route() {
   current = location.hash;
   const [re, view, tab] = ROUTES.find(([re]) => re.test(location.hash)) ?? ROUTES[0];
   const arg = location.hash.match(re)?.[1];
-  const viaMore = ['heart', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
+  const viaMore = ['heart', 'body', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
   for (const a of document.querySelectorAll('.tabs a')) a.toggleAttribute('aria-current', a.dataset.tab === tab || (a.dataset.tab === 'more' && viaMore));
   const root = h('div', { class: 'page' });
   main.replaceChildren(root);

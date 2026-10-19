@@ -16,13 +16,13 @@ page.on('dialog', (d) => d.accept());
 
 await page.goto(demo);
 await page.locator('.findings .finding').first().waitFor();
-assert.match(await page.locator('.hero-banner .sub').textContent(), /12 reports/);
+assert.match(await page.locator('.hero-banner .sub').textContent(), /20 reports/);
 assert.ok(await page.getByText('Pattern of subclinical hypothyroidism').isVisible(), 'thyroid pattern shown');
 await page.screenshot({ path: SHOTS + 'dist-overview.png' });
 
 await page.reload();
 await page.locator('.findings').waitFor();
-assert.match(await page.locator('.hero-banner .sub').textContent(), /12 reports/, 'demo is seeded only once');
+assert.match(await page.locator('.hero-banner .sub').textContent(), /20 reports/, 'demo is seeded only once');
 
 await page.goto(demo + '#/dna');
 await page.getByText('23andMe and tellmeGen compared').waitFor();
