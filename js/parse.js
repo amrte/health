@@ -68,24 +68,45 @@ export function isoDate(s) {
 
 // ---- Claude extraction ---------------------------------------------------
 
-export function buildPrompt() {
-  const list = CATEGORIES.map(([cat, title]) => {
+export const REPORT_TYPES = [
+  ['lab', 'Lab results'],
+  ['ecg', 'ECG'],
+  ['holter', 'Long-term ECG (Holter)'],
+  ['echo', 'Echocardiogram'],
+  ['letter', 'Doctor’s letter or statement'],
+  ['other', 'Other medical document'],
+];
+export const REPORT_TYPE_NAME = Object.fromEntries(REPORT_TYPES);
+
+const WHAT = {
+  lab: 'medical lab report(s)',
+  ecg: 'ECG report(s) or ECG printout(s)',
+  holter: 'long-term ECG (Holter) report(s)',
+  echo: 'echocardiography report(s)',
+  letter: 'doctor’s letter(s), statement(s) or discharge summary',
+  other: 'medical document(s)',
+};
+
+// Instructions for Claude. Every type extracts measured values; letters and heart
+// reports also get a plain-language summary, diagnoses, advice and follow-up.
+export function buildPrompt(type = 'lab') {
+  const cats = type === 'lab' ? CATEGORIES.filter(([c]) => c !== 'cardio') : type === 'letter' || type === 'other' ? CATEGORIES : CATEGORIES.filter(([c]) => c === 'cardio');
+  const list = cats.map(([cat, title]) => {
     const keys = METRICS.filter((m) => m.cat === cat && !m.derived).map((m) => `${m.key} = ${m.name}`);
     return keys.length ? `${title}: ${keys.join('; ')}` : '';
   }).filter(Boolean).join('\n');
-  return `Read the attached medical lab report(s). They may be in English, German, Finnish, Ukrainian or Russian.
-Extract every test result and reply with only one JSON code block in this format:
+  const doc = type !== 'lab';
+  return `Read the attached ${WHAT[type] ?? WHAT.other}. They may be in English, German, Finnish, Ukrainian or Russian.
+${doc ? 'Summarise the document and extract every measured value' : 'Extract every test result'} and reply with only one JSON code block in this format:
 
-{"date": "YYYY-MM-DD", "lab": "lab or clinic name", "results": [
-  {"name": "test name exactly as printed", "metric": "key from the list below or null", "value": "result as printed", "unit": "unit as printed", "ref": "reference range as printed", "flag": "H, L or empty", "date": "YYYY-MM-DD, only if this row has its own date"}
+{"date": "YYYY-MM-DD", "lab": "${doc ? 'clinic or hospital' : 'lab or clinic name'}",${doc ? ` "doctor": "doctor's name", "specialty": "e.g. cardiology", "summary": "3–6 plain-language sentences in English: why it was done, what was found, what was concluded", "conclusion": "the document's own conclusion or rhythm description, translated to English", "diagnoses": ["…"], "recommendations": ["…"], "medications": ["name dose schedule"], "follow_up": "YYYY-MM-DD if a follow-up or control date is given, else empty",` : ''} "results": [
+  {"name": "name exactly as printed", "metric": "key from the list below or null", "value": "result as printed", "unit": "unit as printed", "ref": "reference range as printed", "flag": "H, L or empty", "date": "YYYY-MM-DD, only if this row has its own date"}
 ]}
 
 Rules:
 - Copy values, units and reference ranges exactly as printed. Do not convert units. Decimal commas are fine.
-- One entry per result. If a test is shown for several dates (history columns or a list of earlier results), add one entry per date with that row's "date".
-- White cell types come as percent and as absolute count: use the _pct key for % and the _abs key for counts.
-- Use the sample date (when the blood was taken) for "date", not the print date.
-- Leave out things that are not test results (patient data, addresses, comments). Don't add results that are not in the image.
+- One entry per result. If a value is shown for several dates, add one entry per date with that row's "date".${type === 'lab' ? '\n- White cell types come as percent and as absolute count: use the _pct key for % and the _abs key for counts.\n- Use the sample date (when the blood was taken) for "date", not the print date.' : ''}${type === 'holter' ? '\n- For extra beats give both the count (pvc_count, pac_count) and the share of all beats in % (pvc_pct, pac_pct) when shown. If atrial fibrillation is reported, give af_burden in %; if the report says there was none, give 0.' : ''}${doc ? '\n- Don’t interpret beyond the document; keep diagnoses and advice as the doctor wrote them.' : ''}
+- Leave out personal data (name, address, insurance number). Don't add anything that is not in the document.
 - "metric": the best matching key from this list, or null if none fits:
 ${list}`;
 }
@@ -121,13 +142,27 @@ export function toRow(r) {
   return { name, metric: metric ?? '', valueRaw, unit, refRaw, flag, date: isoDate(r.date) };
 }
 
-// Parses Claude's reply (one or more JSON blocks) into { date, lab, rows }.
+const strList = (x) => (Array.isArray(x) ? x : x ? [x] : []).map((s) => String(s).trim()).filter(Boolean);
+
+// Parses Claude's reply (one or more JSON blocks) into { date, lab, rows, doc }.
+// `doc` holds the letter/report fields (summary, diagnoses, …) when present.
 export function parseExtraction(text) {
   const docs = extractJson(text).flatMap((d) => (Array.isArray(d) && d.some((x) => x?.results) ? d : [d]));
   let date = '';
   let lab = '';
   const rows = [];
+  const doc = { doctor: '', specialty: '', summary: '', conclusion: '', diagnoses: [], recommendations: [], medications: [], followUp: '' };
   for (const d of docs) {
+    if (d && !Array.isArray(d)) {
+      doc.doctor ||= String(d.doctor ?? '').trim();
+      doc.specialty ||= String(d.specialty ?? '').trim();
+      doc.summary ||= String(d.summary ?? '').trim();
+      doc.conclusion ||= String(d.conclusion ?? '').trim();
+      doc.followUp ||= isoDate(d.follow_up ?? d.followUp);
+      doc.diagnoses.push(...strList(d.diagnoses));
+      doc.recommendations.push(...strList(d.recommendations));
+      doc.medications.push(...strList(d.medications));
+    }
     const results = Array.isArray(d) ? d : d.results ?? [];
     const docDate = isoDate(d.date);
     date ||= docDate;
@@ -139,5 +174,5 @@ export function parseExtraction(text) {
       if (row.name || row.metric) rows.push(row);
     }
   }
-  return { date, lab, rows };
+  return { date, lab, rows, doc };
 }

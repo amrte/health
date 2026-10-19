@@ -139,7 +139,8 @@ export function metricSearchText(entry) {
 
 export function reportSearchText(r) {
   const obs = state.obsByReport.get(r.id) ?? [];
-  return [r.lab, r.note, r.date, ...obs.map((o) => o.name), ...obs.map((o) => metricOf(o.metric)?.name ?? '')];
+  return [r.lab, r.note, r.date, r.type, r.doctor, r.specialty, r.summary, r.conclusion, ...(r.diagnoses ?? []), ...(r.recommendations ?? []), ...(r.medications ?? []),
+    ...obs.map((o) => o.name), ...obs.map((o) => metricOf(o.metric)?.name ?? '')];
 }
 
 // ---- writes --------------------------------------------------------------

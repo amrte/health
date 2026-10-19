@@ -7,7 +7,7 @@
 import { h, go, toast, uid } from './dom.js';
 import { METRICS, CATEGORIES, getMetric, matchMetric, customKey } from './metrics.js';
 import { canConvert, convert } from './units.js';
-import { parseValue, parseRange, parseExtraction, buildPrompt } from './parse.js';
+import { parseValue, parseRange, parseExtraction, buildPrompt, REPORT_TYPES, REPORT_TYPE_NAME } from './parse.js';
 import { state, saveReport, statusOf } from './store.js';
 import { fmtNum, fmtRange, todayIso, fmtDate } from './format.js';
 import { pageHead, statusChip, thumb, openFile } from './ui.js';
@@ -88,15 +88,17 @@ function rowPreview(row, reportDate) {
   return h('div', { class: 'preview' }, out);
 }
 
-export async function viewEditor(root, id) {
+export async function viewEditor(root, id, presetType) {
   const existing = id ? state.reportById.get(id) : null;
   if (id && !existing) {
     root.append(pageHead('Not found', { back: '#/reports' }));
     return;
   }
   dirty = false;
-  const report = existing ? structuredClone(existing) : { id: uid(), date: todayIso(), lab: '', note: '', files: [], created: new Date().toISOString() };
+  const report = existing ? structuredClone(existing) : { id: uid(), type: REPORT_TYPE_NAME[presetType] ? presetType : 'lab', date: todayIso(), lab: '', note: '', files: [], created: new Date().toISOString() };
   report.files ??= [];
+  report.type ??= 'lab';
+  for (const k of ['diagnoses', 'recommendations', 'medications']) report[k] ??= [];
   const rows = existing
     ? (state.obsByReport.get(id) ?? []).map((o) => ({ id: o.id, name: o.name, metric: o.metric, valueRaw: o.valueRaw, unit: o.unit, refRaw: o.refRaw, flag: o.flag ?? '', date: o.date === report.date ? '' : o.date }))
     : [];
@@ -104,15 +106,42 @@ export async function viewEditor(root, id) {
   const removedFileIds = [];
   const touch = () => { dirty = true; };
 
-  root.append(pageHead(existing ? 'Edit report' : 'Add lab report', { back: existing ? `#/report/${encodeURIComponent(id)}` : '#/' }));
+  root.append(pageHead(existing ? 'Edit record' : `New: ${REPORT_TYPE_NAME[report.type]}`, { back: existing ? `#/report/${encodeURIComponent(id)}` : '#/' }));
 
   // --- report details
   const dateIn = h('input', { type: 'date', value: report.date, required: true, oninput: (e) => { report.date = e.target.value; touch(); renderRows(); } });
   const labIn = h('input', { type: 'text', value: report.lab, placeholder: 'e.g. city clinic, lab name', list: 'labs', oninput: (e) => { report.lab = e.target.value; touch(); } });
   const labs = [...new Set(state.reports.map((r) => r.lab).filter(Boolean))];
+  // Letter / heart-report fields (doctor, summary, diagnoses, …), hidden for plain lab results.
+  const docInputs = {};
+  const docField = (key, label, multi) => h('label', null, h('span', null, label),
+    (docInputs[key] = multi
+      ? h('textarea', { rows: 3, value: (report[key] ?? []).join('\n'), placeholder: 'One per line', oninput: (e) => { report[key] = e.target.value.split('\n').map((x) => x.trim()).filter(Boolean); touch(); } })
+      : h(key === 'summary' || key === 'conclusion' ? 'textarea' : 'input', { type: key === 'followUp' ? 'date' : 'text', rows: 3, value: report[key] ?? '', oninput: (e) => { report[key] = e.target.value; touch(); } })));
+  const docBox = h('details', { class: 'doc-fields', hidden: report.type === 'lab', open: !!(report.summary || report.diagnoses?.length) },
+    h('summary', null, 'Summary, diagnoses, advice and follow-up', h('span', { class: 'muted small' }, ' — Claude fills these in')),
+    h('div', { class: 'bp-row2' }, docField('doctor', 'Doctor'), docField('specialty', 'Specialty')),
+    docField('summary', 'Summary'),
+    docField('conclusion', 'Conclusion as written'),
+    docField('diagnoses', 'Diagnoses', true),
+    docField('recommendations', 'Recommendations', true),
+    docField('medications', 'Medications', true),
+    docField('followUp', 'Follow-up / control date'));
+  const fillDoc = (d) => {
+    for (const k of ['doctor', 'specialty', 'summary', 'conclusion', 'followUp']) if (d[k] && !report[k]) { report[k] = d[k]; docInputs[k].value = d[k]; }
+    for (const k of ['diagnoses', 'recommendations', 'medications']) if (d[k]?.length) { report[k] = [...new Set([...(report[k] ?? []), ...d[k]])]; docInputs[k].value = report[k].join('\n'); }
+    docBox.open = true;
+  };
   root.append(h('section', { class: 'card form' },
-    h('label', null, h('span', null, 'Sample date'), dateIn),
-    h('label', null, h('span', null, 'Lab or clinic'), labIn, h('datalist', { id: 'labs' }, labs.map((l) => h('option', { value: l })))),
+    h('label', null, h('span', null, 'Type'), h('select', { value: report.type, onchange: (e) => {
+      report.type = e.target.value;
+      docBox.hidden = report.type === 'lab';
+      copyBtn.textContent = 'Copy instructions';
+      touch();
+    } }, REPORT_TYPES.map(([k, n]) => h('option', { value: k }, n)))),
+    h('label', null, h('span', null, report.type === 'lab' ? 'Sample date' : 'Date'), dateIn),
+    h('label', null, h('span', null, 'Lab, clinic or hospital'), labIn, h('datalist', { id: 'labs' }, labs.map((l) => h('option', { value: l })))),
+    docBox,
     h('label', null, h('span', null, 'Note'), h('textarea', { rows: 2, value: report.note, placeholder: 'Optional: why it was done, how you felt…', oninput: (e) => { report.note = e.target.value; touch(); } }))));
 
   // --- photos
@@ -160,7 +189,7 @@ export async function viewEditor(root, id) {
   // --- Claude extraction
   const replyIn = h('textarea', { rows: 4, placeholder: 'Paste Claude’s reply here', class: 'mono' });
   const copyBtn = h('button', { class: 'btn primary', type: 'button', onclick: async () => {
-    const ok = await copyText(buildPrompt());
+    const ok = await copyText(buildPrompt(report.type));
     toast(ok ? 'Instructions copied' : 'Copy failed — try again');
     if (ok) copyBtn.textContent = '✓ Copied — copy again';
   } }, 'Copy instructions');
@@ -169,6 +198,7 @@ export async function viewEditor(root, id) {
       const res = parseExtraction(replyIn.value);
       if (res.date && (!existing || !rows.length)) { report.date = res.date; dateIn.value = res.date; }
       if (res.lab && !report.lab) { report.lab = res.lab; labIn.value = res.lab; }
+      if (report.type !== 'lab') fillDoc(res.doc);
       for (const r of res.rows) {
         if (r.date === report.date) r.date = '';
         rows.push({ id: uid(), ...r, metric: r.metric || (r.name ? customKey(r.name) : '') });
@@ -176,17 +206,17 @@ export async function viewEditor(root, id) {
       replyIn.value = '';
       touch();
       renderRows();
-      toast(`${res.rows.length} results added — check them below`);
+      toast(report.type === 'lab' ? `${res.rows.length} results added — check them below` : `Summary and ${res.rows.length} values added — check them`);
       rowsBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
       toast(err instanceof SyntaxError ? 'The reply isn’t complete JSON. Copy the whole code block.' : err.message);
     }
   } }, 'Read results');
   root.append(h('section', { class: 'card claude' },
-    h('h2', null, 'Read the values with Claude'),
+    h('h2', null, 'Read it with Claude'),
     h('ol', { class: 'steps' },
       h('li', null, copyBtn),
-      h('li', null, 'Open the Claude app, start a new chat, attach the photo(s) of this report, paste the instructions and send. ',
+      h('li', null, 'Open the Claude app, start a new chat, attach the photo(s) or PDF of this document, paste the instructions and send. ',
         h('a', { href: 'https://claude.ai/new', target: '_blank', rel: 'noopener' }, 'Open Claude')),
       h('li', null, 'Copy Claude’s whole reply (the copy button under the code block) and paste it here:', replyIn, readBtn)),
     h('p', { class: 'hint' }, 'Several photos of one report can go in the same chat. For screenshots that list several dates, each result keeps its own date.')));
@@ -269,5 +299,5 @@ export async function viewEditor(root, id) {
   };
   root.append(h('div', { class: 'save-bar' },
     h('a', { class: 'btn', href: existing ? `#/report/${encodeURIComponent(id)}` : '#/' }, 'Cancel'),
-    h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Save report')));
+    h('button', { class: 'btn primary', type: 'button', onclick: save }, 'Save')));
 }

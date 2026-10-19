@@ -13,6 +13,7 @@ import { viewDna } from './dna.js';
 import { viewSearch } from './search.js';
 import { viewDental, viewTooth, viewDentalVisit, viewDentalEditor, dentalDirty, clearDentalDirty } from './dental.js';
 import { viewMore } from './more.js';
+import { viewHeart } from './heart.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -20,7 +21,8 @@ const ROUTES = [
   [/^#\/test\/(.+)$/, (root, key) => viewMetric(root, key), 'overview'],
   [/^#\/reports$/, (root) => viewReports(root), 'reports'],
   [/^#\/report\/(.+)$/, (root, id) => viewReport(root, id), 'reports'],
-  [/^#\/add$/, (root) => viewEditor(root, null), 'reports'],
+  [/^#\/add(?:\/([a-z]+))?$/, (root, type) => viewEditor(root, null, type), 'reports'],
+  [/^#\/heart$/, (root) => viewHeart(root), 'heart'],
   [/^#\/fitness$/, (root) => viewFitness(root), 'fitness'],
   [/^#\/bp$/, (root) => viewBp(root), 'fitness'],
   [/^#\/dna$/, (root) => viewDna(root), 'reports'],

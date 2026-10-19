@@ -108,10 +108,26 @@ assert.equal(await page.locator('.row-edit.unknown').count(), 1);
 assert.equal(await page.locator('.row-edit').nth(2).locator('select').inputValue(), 'ldl');
 assert.equal(await page.locator('input[type=date]').first().inputValue(), '2026-09-30');
 await shot('04-editor');
-await page.getByRole('button', { name: 'Save report' }).click();
+await page.getByRole('button', { name: 'Save', exact: true }).click();
 await page.locator('h1', { hasText: '30 Sept 2026' }).or(page.locator('h1', { hasText: '30 Sep 2026' })).waitFor();
 await shot('05-report');
 assert.ok(await page.getByText('Mystery marker').isVisible());
+
+step('cardiology letter from a Claude reply');
+await page.goto(base + '#/add/letter');
+await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ date: '2026-09-01', lab: 'Heart clinic', doctor: 'Dr. Test', specialty: 'Cardiology',
+  summary: 'Holter for palpitations.', diagnoses: ['Ventricular extrasystoles'], recommendations: ['Echo in 6 months'], follow_up: '2026-11-01',
+  results: [{ name: 'QTc', metric: 'qtc', value: '472', unit: 'ms' }, { name: 'VES-Anteil', metric: null, value: '12,5', unit: '%' }] }) + '\n```');
+await page.getByRole('button', { name: 'Read results' }).click();
+await page.locator('.row-edit').nth(1).waitFor();
+assert.equal(await page.locator('.row-edit').nth(1).locator('select').inputValue(), 'pvc_pct', 'VES-Anteil matched to PVC burden');
+await page.getByRole('button', { name: 'Save', exact: true }).click();
+await page.getByText('Holter for palpitations.').waitFor();
+assert.ok(await page.getByText('Echo in 6 months').isVisible());
+await page.goto(base + '#/heart');
+await page.getByText('QTc prolonged').waitFor();
+assert.ok(await page.getByText('PVC burden 12.5 %').isVisible());
+await shot('05b-heart');
 
 step('vaccinations from a Claude reply');
 await page.goto(base + '#/vaccines/add');

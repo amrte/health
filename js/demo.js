@@ -88,6 +88,7 @@ export function demoData() {
     ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', ''],
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
   const { dental, files } = demoDental();
+  demoHeartAndLetters(reports, obs);
   return { reports, obs, vaccines, ...demoFitness(), bp: demoBp(), genomes: demoGenomes(), dental, files };
 }
 
@@ -215,4 +216,40 @@ export function demoDental(today = new Date()) {
       items: [it('', 'checkup', 65), it('', 'cleaning', 85), it('17', 'watch', null, { note: 'early caries, check next time' })], files: [] },
   ].map((v) => ({ id: uid(), total: null, note: '', demo: true, ...v }));
   return { dental: visits, files };
+}
+
+// Heart records (ECG, 24-hour Holter, echo, cardiologist's letter) and a GP letter
+// whose follow-up date is coming up.
+function demoHeartAndLetters(reports, obs, today = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const ahead = (days) => { const x = new Date(today.getFullYear(), today.getMonth(), today.getDate() + days); return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`; };
+  const add = (report, values) => {
+    const r = { id: uid(), files: [], demo: true, note: '', created: new Date().toISOString(), diagnoses: [], recommendations: [], medications: [], ...report };
+    reports.push(r);
+    for (const [metric, name, valueRaw, unit, refRaw = ''] of values) obs.push({ id: uid(), reportId: r.id, date: r.date, metric, name, valueRaw, unit, refRaw, flag: '' });
+  };
+  add({ type: 'ecg', date: '2025-03-04', lab: 'Demo heart clinic, Helsinki', specialty: 'Cardiology', conclusion: 'Sinus rhythm. Normal ECG.',
+    summary: 'Resting 12-lead ECG done because of palpitations. Normal sinus rhythm with normal intervals.' }, [
+    ['ecg_hr', 'Syke', '62', '/min'], ['pr', 'PQ-aika', '168', 'ms'], ['qrs', 'QRS-kesto', '96', 'ms'], ['qt', 'QT', '402', 'ms'], ['qtc', 'QTc', '438', 'ms'], ['qrs_axis', 'Akseli', '45', '°'],
+  ]);
+  add({ type: 'holter', date: '2025-03-11', lab: 'Demo heart clinic, Helsinki', specialty: 'Cardiology',
+    conclusion: 'Sinus rhythm throughout. Occasional monomorphic ventricular extrasystoles (1.8 %), no runs. No atrial fibrillation. No pauses over 2 s.',
+    summary: '24-hour ECG for palpitations. The extra beats he felt were occasional ventricular extra beats; no atrial fibrillation and no long pauses.' }, [
+    ['holter_hours', 'Recording duration', '23.6', 'h'], ['holter_hr_min', 'Minimum heart rate', '46', 'bpm'], ['holter_hr_avg', 'Mean heart rate', '68', 'bpm'],
+    ['holter_hr_max', 'Maximum heart rate', '141', 'bpm'], ['pvc_count', 'VES', '1830', ''], ['pvc_pct', 'VES burden', '1.8', '%'],
+    ['pac_count', 'SVES', '410', ''], ['pac_pct', 'SVES burden', '0.4', '%'], ['af_burden', 'AF burden', '0', '%'], ['pause_max', 'Longest pause', '1.9', 's'],
+  ]);
+  add({ type: 'echo', date: '2025-04-02', lab: 'Demo heart clinic, Helsinki', specialty: 'Cardiology', conclusion: 'Normal-sized left ventricle with normal systolic function. No valve disease.',
+    summary: 'Ultrasound of the heart: normal size and pumping function, valves normal.' }, [
+    ['lvef', 'EF (biplane)', '61', '%'], ['lvedd', 'LVIDd', '51', 'mm'], ['ivsd', 'IVSd', '10', 'mm'], ['lavi', 'LAVI', '28', 'ml/m2'],
+  ]);
+  add({ type: 'letter', date: '2025-04-10', lab: 'Demo heart clinic, Helsinki', doctor: 'Dr. Demo (cardiologist)', specialty: 'Cardiology',
+    summary: 'Seen for palpitations. ECG, 24-hour ECG and echocardiogram were normal apart from occasional harmless-looking extra beats. No treatment needed.',
+    diagnoses: ['Palpitations due to occasional ventricular extrasystoles'],
+    recommendations: ['Reduce caffeine and alcohol', 'No medication needed', 'Contact a doctor if fainting, chest pain or a long-lasting fast heartbeat occurs'] }, []);
+  add({ type: 'letter', date: '2026-05-20', lab: 'Demo health centre, Helsinki', doctor: 'Dr. Demo (GP)', specialty: 'General practice', followUp: ahead(25),
+    summary: 'Annual check-up results reviewed. TSH slightly raised with normal free T4; fasting glucose and HbA1c in the prediabetes range; LDL cholesterol above target; ferritin low.',
+    diagnoses: ['Subclinical hypothyroidism, to be confirmed', 'Impaired fasting glucose (prediabetes)', 'Low iron stores'],
+    recommendations: ['Repeat TSH, free T4 and TPO antibodies in 2–3 months', 'More physical activity and weight control', 'Iron-rich diet; recheck ferritin with the next tests'],
+    medications: [] }, []);
 }

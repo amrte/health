@@ -90,3 +90,28 @@ test('discussion summary', async () => {
   assert.ok(!text.includes('Ferritin'), 'only selected tests');
   assert.match(text, /cite each source with a link/);
 });
+
+test('heart rules', () => {
+  const f = evaluate(data([
+    ['qtc', '2026-05-01', 465, 'ms'], ['qrs', '2026-05-01', 124, 'ms'], ['pr', '2026-05-01', 212, 'ms'],
+    ['pvc_pct', '2026-05-02', '11', '%'], ['af_burden', '2026-05-02', '0.3', '%'], ['pause_max', '2026-05-02', '3.4', 's'],
+    ['lvef', '2026-05-03', 45, '%'], ['lvedd', '2026-05-03', '6,0', 'cm'], ['ntprobnp', '2026-05-03', 180, 'pg/ml'],
+  ]), { sex: 'male', birthYear: 1980 }, NOW);
+  const t = titles(f);
+  for (const x of ['QTc prolonged', 'Wide QRS (≥ 120 ms)', 'PR interval over 200 ms', 'PVC burden 11 %', 'Atrial fibrillation recorded',
+    'Longest pause 3.4 s', 'LVEF 45 %: mildly reduced', 'Left ventricle larger than normal', 'NT-proBNP 125 ng/L or more']) assert.ok(t.includes(x), x + ' | ' + t.join(' | '));
+  assert.equal(f.find((x) => x.title === 'Atrial fibrillation recorded').level, 'alert');
+  const women = titles(evaluate(data([['qtc', '2026-05-01', 455, 'ms']]), { sex: 'female' }, NOW));
+  assert.ok(women.includes('QTc in the normal range'), 'women: prolonged from 460');
+  assert.ok(titles(evaluate(data([['qtc', '2026-05-01', 512, 'ms']]), {}, NOW)).includes('QTc above 500 ms'));
+});
+
+test('document prompts and letter fields', async () => {
+  const { buildPrompt, parseExtraction } = await import('../js/parse.js');
+  assert.ok(buildPrompt('holter').includes('pvc_pct'));
+  assert.ok(!buildPrompt('lab').includes('pvc_pct'), 'lab prompt lists no heart keys');
+  assert.ok(buildPrompt('letter').includes('"summary"'));
+  const r = parseExtraction('```json\n{"date":"2026-01-02","doctor":"Dr X","specialty":"Cardiology","summary":"S","diagnoses":["A","B"],"recommendations":"Walk","follow_up":"2026-03-01","results":[{"name":"PQ-Zeit","value":"0,18","unit":"s"}]}\n```');
+  assert.deepEqual([r.doc.doctor, r.doc.diagnoses, r.doc.recommendations, r.doc.followUp], ['Dr X', ['A', 'B'], ['Walk'], '2026-03-01']);
+  assert.equal(r.rows[0].metric, 'pr');
+});

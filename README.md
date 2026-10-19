@@ -119,6 +119,39 @@ works offline.
   among reported variants in medically important genes). A missing variant
   means "not tested", not "normal".
 
+**Teeth**
+- A tooth chart in FDI numbering (11–48). Each tooth's state comes from its
+  treatment history: fillings with surfaces, root canal, crown, bridge,
+  implant, extraction, sealant, "to watch". The chart shows letter badges, so
+  it never relies on colour alone.
+- Visits store their treatments, prices, bills, X-rays (panoramic, bitewing,
+  periapical, 3D) linked to teeth, and the next check-up date. Costs are added
+  up per year and currency.
+- Claude reads dental bills and treatment records and converts other tooth
+  notations to FDI. A due or overdue check-up appears on the overview.
+
+**Heart and doctor letters**
+- Record types: lab results, ECG, long-term ECG (Holter), echocardiogram,
+  doctor's letter, other document.
+- For each type Claude extracts the values, and for documents it also writes
+  a summary, diagnoses, recommendations, medications and the follow-up date.
+  Follow-ups appear on the overview.
+- New measurements with trends: QTc, PR, QRS, heart rate, Holter heart rates,
+  PVC and PAC counts and burden, AF burden, longest pause, LVEF, LVEDD,
+  IVSd, LAVI, NT-proBNP and troponin.
+- Rules and their sources:
+  - prolonged QTc ≥450 ms in men and ≥460 ms in women, >500 ms
+    (AHA/ACCF/HRS 2009, AHA 2010)
+  - wide QRS, and PR >200 ms
+  - PVC burden ≥10 % (ESC 2022)
+  - any AF recorded (ESC 2024)
+  - pauses (ESC 2021)
+  - LVEF categories (ESC 2021 HF, ASE/EACVI 2015)
+  - heart size limits (ASE/EACVI 2015)
+  - NT-proBNP rule-out level (ESC 2021)
+- The Heart page brings together the findings, the heart records, the values,
+  blood pressure and heart-related blood tests.
+
 **Search**
 - Searches everything:
   - tests, including their names in English, German, Finnish, Ukrainian and

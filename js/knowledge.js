@@ -60,6 +60,24 @@ export const SOURCES = {
     title: 'Guidelines for the management of arterial hypertension (J Hypertens 2023;41:1874–2071)', url: 'https://doi.org/10.1097/HJH.0000000000003480' },
   aha_bp: { short: 'AHA', org: 'American Heart Association', year: null,
     title: 'Understanding blood pressure readings', url: 'https://www.heart.org/en/health-topics/high-blood-pressure/understanding-blood-pressure-readings' },
+  aha2009qt: { short: 'AHA/ACCF/HRS 2009', org: 'American Heart Association / ACCF / Heart Rhythm Society', year: 2009,
+    title: 'ECG standardization and interpretation, Part IV: ST segment, T and U waves, and the QT interval (Circulation 2009;119:e241)', url: 'https://www.ahajournals.org/doi/10.1161/circulationaha.108.191096' },
+  aha2009qrs: { short: 'AHA/ACCF/HRS 2009', org: 'American Heart Association / ACCF / Heart Rhythm Society', year: 2009,
+    title: 'ECG standardization and interpretation, Part III: intraventricular conduction disturbances (Circulation 2009;119:e235)', url: 'https://doi.org/10.1161/CIRCULATIONAHA.108.191095' },
+  aha2010tdp: { short: 'AHA/ACCF 2010', org: 'American Heart Association / ACCF', year: 2010,
+    title: 'Prevention of torsade de pointes in hospital settings (Circulation 2010;121:1047–1060)', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC3056123/' },
+  acc2018brady: { short: 'ACC/AHA/HRS 2018', org: 'ACC / AHA / Heart Rhythm Society', year: 2018,
+    title: 'Guideline on the evaluation and management of bradycardia and cardiac conduction delay', url: 'https://doi.org/10.1161/CIR.0000000000000628' },
+  esc2022va: { short: 'ESC 2022', org: 'European Society of Cardiology', year: 2022,
+    title: 'Guidelines for ventricular arrhythmias and the prevention of sudden cardiac death (Eur Heart J 2022;43:3997)', url: 'https://academic.oup.com/eurheartj/article/43/40/3997/6675633' },
+  esc2024af: { short: 'ESC 2024', org: 'European Society of Cardiology', year: 2024,
+    title: 'Guidelines for the management of atrial fibrillation (Eur Heart J 2024;45:3314)', url: 'https://doi.org/10.1093/eurheartj/ehae176' },
+  esc2021pace: { short: 'ESC 2021', org: 'European Society of Cardiology', year: 2021,
+    title: 'Guidelines on cardiac pacing and cardiac resynchronization therapy (Eur Heart J 2021;42:3427)', url: 'https://doi.org/10.1093/eurheartj/ehab364' },
+  esc2021hf: { short: 'ESC 2021 HF', org: 'European Society of Cardiology', year: 2021,
+    title: 'Guidelines for the diagnosis and treatment of acute and chronic heart failure (Eur Heart J 2021;42:3599)', url: 'https://doi.org/10.1093/eurheartj/ehab368' },
+  ase2015: { short: 'ASE/EACVI 2015', org: 'American Society of Echocardiography / EACVI', year: 2015,
+    title: 'Recommendations for cardiac chamber quantification by echocardiography in adults', url: 'https://academic.oup.com/ehjcimaging/article/16/3/233/2400086' },
   nice239: { short: 'NICE NG239', org: 'National Institute for Health and Care Excellence', year: 2024,
     title: 'Vitamin B12 deficiency in over 16s: diagnosis and management', url: 'https://www.nice.org.uk/guidance/ng239' },
 };
@@ -381,6 +399,132 @@ export const KB = {
   hct: { about: 'Hematocrit is the share of blood volume made up of red cells. It moves together with hemoglobin.', sources: ['ml_hct'], pubmed: 'hematocrit interpretation' },
   mcv: { about: 'MCV is the average size of red blood cells. Small cells (low MCV) suggest iron deficiency or thalassaemia trait; large cells (high MCV) suggest B12 or folate deficiency, alcohol, liver disease or some medicines.', sources: ['ml_mcv', 'ml_indices'], pubmed: 'mean corpuscular volume anemia classification' },
 };
+// ---- heart ---------------------------------------------------------------------------
+Object.assign(KB, {
+  qtc: {
+    about: 'The QT interval is the time the heart’s chambers take to recharge electrically; QTc corrects it for heart rate. A long QTc can come from medicines, low potassium or magnesium, or inherited conditions, and raises the risk of a dangerous rhythm.',
+    thresholds: [
+      { label: 'Prolonged, men', value: '≥ 450 ms', source: 'aha2009qt' },
+      { label: 'Prolonged, women', value: '≥ 460 ms', source: 'aha2009qt' },
+      { label: 'Short', value: '≤ 390 ms', source: 'aha2009qt' },
+      { label: 'Clearly higher risk of torsade de pointes', value: '> 500 ms', source: 'aha2010tdp' },
+    ],
+    note: 'Machine-measured QTc values vary with the correction formula; a cardiologist’s reading counts.',
+    sources: ['aha2009qt'],
+    pubmed: 'QTc prolongation risk',
+    rules: [(p, c) => {
+      if (p.v > 500) return F('alert', 'QTc above 500 ms', `${v(p.v, 'ms')}. A QT above 500 ms is associated with a two- to threefold higher risk of torsade de pointes. Check medicines that prolong QT and potassium/magnesium with a doctor promptly.`, ['aha2010tdp']);
+      const lim = c.sex === 'female' ? 460 : c.sex === 'male' ? 450 : 460;
+      if (p.v >= lim) return F('attention', 'QTc prolonged', `${v(p.v, 'ms')} is at or above ${lim} ms, the AHA/ACCF/HRS limit for a prolonged QTc${c.sex ? ` in ${c.sex === 'male' ? 'men' : 'women'}` : ''}. Worth reviewing medicines and electrolytes.`, ['aha2009qt']);
+      if (!c.sex && p.v >= 450) return F('info', 'QTc borderline', `${v(p.v, 'ms')} counts as prolonged for men (≥ 450 ms) but not for women (≥ 460 ms). Add your sex in the profile for the right limit.`, ['aha2009qt']);
+      if (p.v <= 390) return F('info', 'QTc short', `${v(p.v, 'ms')} is at or below 390 ms, which AHA/ACCF/HRS call a short QT interval.`, ['aha2009qt']);
+      return F('good', 'QTc in the normal range', `${v(p.v, 'ms')}.`, ['aha2009qt']);
+    }],
+  },
+  qt: { about: 'Uncorrected QT interval. It depends on heart rate, so QTc (corrected) is used for judging it.', sources: ['aha2009qt'], pubmed: 'QT interval' },
+  pr: {
+    about: 'The PR (PQ) interval is the time the electrical signal takes from the atria to the ventricles.',
+    thresholds: [{ label: 'Usual range', value: '120–200 ms', source: 'aha2009qrs' }, { label: 'First-degree AV block', value: '> 200 ms', source: 'aha2009qrs' }],
+    note: 'These limits come from reviews of the AHA/ACCF/HRS recommendations.',
+    sources: ['aha2009qrs'],
+    pubmed: 'PR interval first-degree atrioventricular block',
+    rules: [(p) => (p.v > 200 ? F('info', 'PR interval over 200 ms', `${v(p.v, 'ms')} — the pattern called first-degree AV block. It can be a normal finding; mention it to your doctor, especially when medicines that slow the heart are considered.`, ['aha2009qrs']) : null)],
+  },
+  qrs: {
+    about: 'QRS duration is how long the ventricles take to activate. A wide QRS can mean a bundle branch block.',
+    thresholds: [{ label: 'Incomplete bundle branch block (adults)', value: '110–119 ms', source: 'aha2009qrs' }, { label: 'Complete bundle branch block (adults)', value: '≥ 120 ms', source: 'aha2009qrs' }],
+    sources: ['aha2009qrs'],
+    pubmed: 'QRS duration bundle branch block',
+    rules: [(p) => {
+      if (p.v >= 120) return F('attention', 'Wide QRS (≥ 120 ms)', `${v(p.v, 'ms')} is in the range of a complete bundle branch block. The ECG report says which one — ask your doctor what it means for you.`, ['aha2009qrs']);
+      if (p.v >= 110) return F('info', 'QRS 110–119 ms', `${v(p.v, 'ms')} — the range of an incomplete bundle branch block.`, ['aha2009qrs']);
+      return null;
+    }],
+  },
+  ecg_hr: {
+    about: 'Heart rate measured on the resting ECG.',
+    thresholds: [{ label: 'Sinus bradycardia', value: '< 50 bpm', source: 'acc2018brady' }],
+    sources: ['acc2018brady'],
+    pubmed: 'resting heart rate',
+    rules: [(p) => (p.v < 50 ? F('info', 'Heart rate below 50', `${v(p.v, 'bpm')}. Below 50 counts as sinus bradycardia. It can be normal, e.g. in fit people; it matters more with dizziness, fainting or tiredness.`, ['acc2018brady']) : null)],
+  },
+  pvc_pct: {
+    about: 'The share of all heartbeats over the recording that were ventricular extra beats (PVCs, VES). A few are normal; a very high share over a long time can weaken the heart muscle.',
+    thresholds: [{ label: 'Follow heart function; PVC cardiomyopathy possible', value: '≥ 10 %', source: 'esc2022va' }],
+    sources: ['esc2022va'],
+    pubmed: 'premature ventricular contraction burden cardiomyopathy',
+    rules: [(p) => (p.v >= 10 ? F('attention', `PVC burden ${fmtNum(p.v)} %`, `ESC 2022: with a PVC burden of about 10 % or more, heart function (LVEF) should be followed up regularly, because frequent PVCs can weaken the heart muscle over time.`, ['esc2022va']) : null)],
+  },
+  af_burden: {
+    about: 'Share of the recording spent in atrial fibrillation (AF).',
+    thresholds: [{ label: 'Diagnosis of AF', value: 'AF on ECG for ≥ 30 s', source: 'esc2024af' }],
+    sources: ['esc2024af'],
+    pubmed: 'atrial fibrillation burden',
+    rules: [(p) => (p.v > 0 ? F('alert', 'Atrial fibrillation recorded', `${fmtNum(p.v)} % of the recording. ESC: AF documented on an ECG for at least 30 seconds is diagnostic. A recorded AF episode should be discussed with a doctor — including whether stroke prevention is needed.`, ['esc2024af']) : null)],
+  },
+  pause_max: {
+    about: 'The longest gap between two heartbeats during the recording.',
+    thresholds: [{ label: 'Relevant when assessing fainting', value: '> 3 s with symptoms, > 6 s without', source: 'esc2021pace' }],
+    sources: ['esc2021pace'],
+    pubmed: 'sinus pause ambulatory ECG',
+    rules: [(p) => (p.v > 3 ? F(p.v > 6 ? 'attention' : 'info', `Longest pause ${fmtNum(p.v)} s`, `The ESC pacing guideline considers pauses over 3 s (with symptoms) or over 6 s (without) when deciding about a pacemaker in people who faint. Whether it matters depends on symptoms and when it happened (e.g. during sleep).`, ['esc2021pace']) : null)],
+  },
+  lvef: {
+    about: 'Left ventricular ejection fraction: the share of blood pumped out with each beat — the main measure of the heart’s pumping strength.',
+    thresholds: [
+      { label: 'Normal, men / women', value: '52–72 % / 54–74 %', source: 'ase2015' },
+      { label: 'Heart failure with mildly reduced EF', value: '41–49 %', source: 'esc2021hf' },
+      { label: 'Heart failure with reduced EF', value: '≤ 40 %', source: 'esc2021hf' },
+    ],
+    note: 'The heart-failure categories apply only together with symptoms and signs of heart failure.',
+    sources: ['ase2015', 'esc2021hf'],
+    pubmed: 'left ventricular ejection fraction',
+    rules: [(p, c) => {
+      if (p.v <= 40) return F('alert', `LVEF ${fmtNum(p.v)} %: reduced`, 'At or below 40 % — the range ESC calls reduced ejection fraction. This needs cardiology care.', ['esc2021hf']);
+      if (p.v < 50) return F('attention', `LVEF ${fmtNum(p.v)} %: mildly reduced`, 'ESC calls 41–49 % mildly reduced ejection fraction.', ['esc2021hf']);
+      const lo = c.sex === 'female' ? 54 : 52;
+      if (p.v < lo) return F('info', `LVEF ${fmtNum(p.v)} %: just below normal`, `ASE/EACVI give ${c.sex === 'female' ? '54–74 % for women' : '52–72 % for men'} as normal.`, ['ase2015']);
+      return F('good', `LVEF ${fmtNum(p.v)} %: normal`, 'Within the normal range (ASE/EACVI 2015).', ['ase2015']);
+    }],
+  },
+  lvedd: {
+    about: 'Inner diameter of the left ventricle when relaxed. A large value can mean the ventricle is dilated.',
+    thresholds: [{ label: 'Normal, men', value: '42–58 mm', source: 'ase2015' }, { label: 'Normal, women', value: '38–52 mm', source: 'ase2015' }],
+    sources: ['ase2015'],
+    pubmed: 'left ventricular end-diastolic diameter',
+    rules: [(p, c) => {
+      if (!c.sex) return null;
+      const hi = c.sex === 'male' ? 58.4 : 52.2;
+      return p.v > hi ? F('attention', 'Left ventricle larger than normal', `${v(p.v, 'mm')} is above the ASE/EACVI upper limit of ${hi} mm for ${c.sex === 'male' ? 'men' : 'women'}.`, ['ase2015']) : null;
+    }],
+  },
+  ivsd: {
+    about: 'Thickness of the wall between the ventricles. Thicker walls are seen with long-standing high blood pressure, among other causes.',
+    thresholds: [{ label: 'Normal, men / women', value: '6–10 mm / 6–9 mm', source: 'ase2015' }],
+    sources: ['ase2015'],
+    pubmed: 'interventricular septal thickness hypertrophy',
+    rules: [(p, c) => {
+      if (!c.sex) return null;
+      const hi = c.sex === 'male' ? 10 : 9;
+      return p.v > hi ? F('info', 'Septum thicker than normal', `${v(p.v, 'mm')} is above ${hi} mm, the upper normal value ASE/EACVI give for ${c.sex === 'male' ? 'men' : 'women'}.`, ['ase2015']) : null;
+    }],
+  },
+  lavi: {
+    about: 'Volume of the left atrium relative to body size. It grows with long-standing high filling pressure, e.g. from high blood pressure or valve disease.',
+    thresholds: [{ label: 'Normal', value: '≤ 34 mL/m²', source: 'ase2015' }],
+    sources: ['ase2015'],
+    pubmed: 'left atrial volume index',
+    rules: [(p) => (p.v > 34 ? F('info', 'Left atrium enlarged', `${v(p.v, 'mL/m²')} is above 34 mL/m², the ASE/EACVI upper normal limit.`, ['ase2015']) : null)],
+  },
+  ntprobnp: {
+    about: 'NT-proBNP is released by the heart when its walls are stretched. It’s used to rule heart failure out.',
+    thresholds: [{ label: 'Heart failure unlikely (not acute)', value: '< 125 ng/L (pg/mL)', source: 'esc2021hf' }, { label: 'Heart failure unlikely (acute)', value: '< 300 ng/L', source: 'esc2021hf' }],
+    sources: ['esc2021hf'],
+    pubmed: 'NT-proBNP heart failure diagnosis',
+    rules: [(p) => (p.v >= 125 ? F('info', 'NT-proBNP 125 ng/L or more', `${v(p.v, 'ng/L')} — above the level ESC uses to rule heart failure out in a non-acute setting. That doesn’t mean heart failure; it means it can’t be ruled out by this test alone.`, ['esc2021hf']) : null)],
+  },
+});
+
 KB.egfr_calc = {
   ...KB.egfr,
   about: 'Calculated by the app from your creatinine, age and sex with the CKD-EPI 2021 equation (without race), as recommended internationally. Your lab may report its own eGFR, which takes precedence.',

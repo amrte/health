@@ -11,6 +11,7 @@ import { todayIso } from './format.js';
 import { fitnessFindings } from './fitness-eval.js';
 import { bpFindings } from './bp-eval.js';
 import { fmtDate, fmtRange } from './format.js';
+import { REPORT_TYPES, REPORT_TYPE_NAME } from './parse.js';
 import { lineChart, sparkline } from './chart.js';
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
 import { protectionGroups, protectionRow, vaccineSearchText, dueAdvice, dueAdviceRow } from './vaccines.js';
@@ -29,7 +30,7 @@ function labOf(o) {
   return state.reportById.get(o.reportId)?.lab ?? '';
 }
 
-function metricRow(entry) {
+export function metricRow(entry) {
   const { m, pts, last } = entry;
   return h('a', { class: 'row', href: `#/test/${enc(m.key)}` },
     h('div', { class: 'row-main' },
@@ -105,10 +106,20 @@ export function viewOverview(root) {
       dent.date < todayIso()
         ? h('span', { class: 'status st-high' }, h('span', { class: 'status-icon' }, '▲'), ` Overdue since ${fmtDate(dent.date)}`)
         : h('span', { class: 'status st-soon' }, h('span', { class: 'status-icon' }, '●'), ` Due ${fmtDate(dent.date)}`))) : null;
-    if ((due.length || sched.length || dentRow) && !overviewQuery) {
+    // Follow-ups from doctor letters: from 60 days overdue to 30 days ahead, unless a later record of the same specialty exists.
+    const ago = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+    const follow = state.reports.filter((r) => r.followUp && r.followUp >= ago && r.followUp <= soon &&
+      !state.reports.some((x) => x !== r && x.date > r.date && (x.specialty || '') === (r.specialty || '') && x.type === r.type))
+      .map((r) => h('a', { class: 'row', href: `#/report/${enc(r.id)}` }, h('div', { class: 'row-main' },
+        h('div', { class: 'row-title' }, `Follow-up${r.specialty ? ': ' + r.specialty : ''}`),
+        h('div', { class: 'row-meta' }, `From ${REPORT_TYPE_NAME[r.type]?.toLowerCase() ?? 'record'} of ${fmtDate(r.date)}${r.doctor ? ' · ' + r.doctor : ''}`),
+        r.followUp < todayIso()
+          ? h('span', { class: 'status st-high' }, h('span', { class: 'status-icon' }, '▲'), ` Was due ${fmtDate(r.followUp)}`)
+          : h('span', { class: 'status st-soon' }, h('span', { class: 'status-icon' }, '●'), ` Due ${fmtDate(r.followUp)}`))));
+    if ((due.length || sched.length || dentRow || follow.length) && !overviewQuery) {
       out.push(h('section', { class: 'group wide' },
         h('h2', null, 'Due and overdue'),
-        h('div', { class: 'card list' }, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
+        h('div', { class: 'card list' }, follow, due.map(protectionRow), sched.map(dueAdviceRow), dentRow)));
     }
     const flagged = entries.filter((e) => e.last.status === 'high' || e.last.status === 'low');
     if (flagged.length && !overviewQuery) {
@@ -178,28 +189,41 @@ export function viewMetric(root, key) {
   root.append(aboutCard(key));
 }
 
-function reportRow(r) {
+export function reportRow(r) {
   const pts = reportPoints(r.id);
   const out = pts.filter((p) => p.status === 'high' || p.status === 'low').length;
+  const type = r.type && r.type !== 'lab' ? REPORT_TYPE_NAME[r.type] : '';
   return h('a', { class: 'row', href: `#/report/${enc(r.id)}` },
     h('div', { class: 'row-main' },
-      h('div', { class: 'row-title' }, fmtDate(r.date)),
-      h('div', { class: 'row-meta' }, r.lab || 'No lab name', r.demo ? ' · demo' : '')),
+      h('div', { class: 'row-title' }, fmtDate(r.date), type ? h('span', { class: 'type-badge' }, type) : null),
+      h('div', { class: 'row-meta' }, [r.lab, r.doctor, r.specialty].filter(Boolean).join(' · ') || 'No lab name', r.demo ? ' · demo' : ''),
+      r.summary ? h('div', { class: 'row-meta' }, r.summary) : null),
     h('div', { class: 'row-value' },
-      h('div', { class: 'small' }, `${pts.length} results`, r.files?.length ? ` · ${r.files.length} 📎` : ''),
+      h('div', { class: 'small' }, pts.length ? `${pts.length} values` : '', r.files?.length ? ` · ${r.files.length} 📎` : ''),
       out ? h('span', { class: 'status st-high' }, h('span', { class: 'status-icon' }, '▲'), ` ${out} out of range`) : null));
 }
 
+const HEART_TYPES = new Set(['ecg', 'holter', 'echo']);
+export const isHeartRecord = (r) => HEART_TYPES.has(r.type) || /kardio|cardio|кардіо|кардио|sydän/i.test(r.specialty ?? '');
+let reportsFilter = 'all';
+
 export function viewReports(root) {
   const list = h('div', { class: 'card list' });
-  root.append(pageHead('Lab reports', { actions: [h('a', { class: 'btn', href: '#/dna' }, 'DNA'), h('a', { class: 'btn primary', href: '#/add' }, '+ Add')] }));
+  root.append(pageHead('Records', { sub: 'Lab results, ECGs, echocardiograms and doctor letters',
+    actions: [h('a', { class: 'btn', href: '#/add/letter' }, '+ Letter'), h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report')] }));
   if (!state.reports.length) {
     root.append(emptyState());
     return;
   }
-  root.append(searchBox(reportsQuery, 'Search labs, tests, notes', (q) => { reportsQuery = q; render(); }), list);
+  const filters = [['all', 'All'], ['lab', 'Lab results'], ['heart', 'Heart'], ['letter', 'Letters']];
+  const pills = h('div', { class: 'pills', role: 'group', 'aria-label': 'Show' });
+  const renderPills = () => pills.replaceChildren(...filters.map(([k, label]) => h('button', { type: 'button', class: 'pill', 'aria-pressed': String(reportsFilter === k),
+    onclick: () => { reportsFilter = k; renderPills(); render(); } }, label)));
+  renderPills();
+  root.append(searchBox(reportsQuery, 'Search labs, tests, doctors, diagnoses', (q) => { reportsQuery = q; render(); }), pills, list);
   function render() {
-    const reps = state.reports.filter((r) => matches(reportsQuery, reportSearchText(r))).sort((a, b) => b.date.localeCompare(a.date));
+    const keep = (r) => reportsFilter === 'all' || (reportsFilter === 'heart' ? isHeartRecord(r) : reportsFilter === 'lab' ? (r.type ?? 'lab') === 'lab' : r.type === reportsFilter);
+    const reps = state.reports.filter((r) => keep(r) && matches(reportsQuery, reportSearchText(r))).sort((a, b) => b.date.localeCompare(a.date));
     list.replaceChildren(...(reps.length ? reps.map(reportRow) : [h('p', { class: 'muted pad' }, 'No matching reports.')]));
   }
   render();
@@ -222,6 +246,17 @@ export async function viewReport(root, id) {
     sub: r.lab || 'No lab name',
     actions: [h('a', { class: 'btn', href: `#/edit/${enc(id)}` }, 'Edit'), h('button', { class: 'btn danger', onclick: del }, 'Delete')],
   }));
+  if (r.summary || r.conclusion || r.diagnoses?.length || r.recommendations?.length || r.medications?.length || r.followUp) {
+    const list = (title, items) => (items?.length ? [h('h3', null, title), h('ul', { class: 'doc-list' }, items.map((x) => h('li', null, x)))] : []);
+    root.append(h('section', { class: 'card doc' },
+      h('h2', null, REPORT_TYPE_NAME[r.type] ?? 'Document', r.specialty ? ` · ${r.specialty}` : ''),
+      r.doctor ? h('p', { class: 'muted small' }, r.doctor) : null,
+      r.summary ? h('p', null, r.summary) : null,
+      r.conclusion ? [h('h3', null, 'Conclusion as written'), h('p', { class: 'doc-quote' }, r.conclusion)] : null,
+      list('Diagnoses', r.diagnoses), list('Recommendations', r.recommendations), list('Medications', r.medications),
+      r.followUp ? h('p', null, h('strong', null, 'Follow-up: '), fmtDate(r.followUp)) : null,
+      h('p', { class: 'muted small' }, 'Summaries made by Claude can contain mistakes — the original document attached below counts.')));
+  }
   if (r.note) root.append(h('section', { class: 'card note' }, r.note));
   if (r.files?.length) {
     const grid = h('div', { class: 'thumbs' });

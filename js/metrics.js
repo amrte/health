@@ -22,6 +22,7 @@ export const CATEGORIES = [
   ['vitamins', 'Vitamins'],
   ['hormones', 'Hormones'],
   ['coag', 'Coagulation'],
+  ['cardio', 'Heart (ECG, Holter, echo)'],
   ['other', 'Other'],
 ];
 export const CATEGORY_NAME = Object.fromEntries(CATEGORIES);
@@ -223,6 +224,55 @@ const DEFS = [
   { key: 'fibrinogen', cat: 'coag', name: 'Fibrinogen', unit: 'g/L', alt: { 'mg/dl': 0.01 },
     aliases: ['fibrinogen', 'fibrinogeeni', 'фібриноген', 'фибриноген'] },
 ];
+
+// Heart: ECG, long-term ECG (Holter), echocardiography and cardiac blood tests.
+const MS = { s: 1000, sec: 1000, sek: 1000 };
+DEFS.push(
+  { key: 'ecg_hr', cat: 'cardio', name: 'Heart rate (ECG)', unit: 'bpm', alt: { '/min': 1, 'min-1': 1, 'уд/хв': 1, 'уд/мин': 1, 'lyöntiä/min': 1 },
+    aliases: ['heart rate', 'ventricular rate', 'herzfrequenz', 'frequenz', 'hf', 'syke', 'sykefrekvenssi', 'чсс', 'частота серцевих скорочень', 'частота сердечных сокращений'] },
+  { key: 'pr', cat: 'cardio', name: 'PR interval', unit: 'ms', alt: MS,
+    aliases: ['pr', 'pr interval', 'pq', 'pq zeit', 'pq dauer', 'pq interval', 'pq aika', 'інтервал pq', 'интервал pq', 'інтервал pr', 'интервал pr'] },
+  { key: 'qrs', cat: 'cardio', name: 'QRS duration', unit: 'ms', alt: MS,
+    aliases: ['qrs', 'qrs duration', 'qrs dauer', 'qrs breite', 'qrs kesto', 'qrs aika', 'тривалість qrs', 'длительность qrs', 'комплекс qrs'], not: ['achse', 'axis', 'akseli', 'вісь', 'ось'] },
+  { key: 'qt', cat: 'cardio', name: 'QT interval', unit: 'ms', alt: MS,
+    aliases: ['qt', 'qt interval', 'qt zeit', 'qt aika', 'інтервал qt', 'интервал qt'], not: ['qtc', 'korr', 'corr', 'коригов', 'корриг'] },
+  { key: 'qtc', cat: 'cardio', name: 'QTc (corrected QT)', unit: 'ms', alt: MS,
+    aliases: ['qtc', 'qt corrected', 'corrected qt', 'qtc bazett', 'qtc fridericia', 'qtc framingham', 'frequenzkorrigierte qt', 'qt korrigiert', 'qtc aika', 'коригований qt', 'корригированный qt', 'qtc інтервал'] },
+  { key: 'qrs_axis', cat: 'cardio', name: 'QRS axis', unit: '°', alt: { deg: 1, grad: 1 },
+    aliases: ['qrs axis', 'axis', 'lagetyp', 'qrs achse', 'sähköinen akseli', 'akseli', 'електрична вісь', 'электрическая ось'] },
+  { key: 'holter_hours', cat: 'cardio', name: 'Recording duration (Holter)', unit: 'h', alt: { min: 1 / 60, std: 1, hrs: 1, hours: 1, t: 1, год: 1 },
+    aliases: ['recording duration', 'analysed duration', 'registrierdauer', 'aufzeichnungsdauer', 'auswertungsdauer', 'rekisteröinnin kesto', 'тривалість запису', 'длительность записи'] },
+  { key: 'holter_hr_min', cat: 'cardio', name: 'Lowest heart rate (Holter)', unit: 'bpm', alt: { '/min': 1 },
+    aliases: ['minimum heart rate', 'min heart rate', 'lowest heart rate', 'min hr', 'minimale herzfrequenz', 'min hf', 'alin syke', 'minimisyke', 'мінімальна чсс', 'минимальная чсс'] },
+  { key: 'holter_hr_avg', cat: 'cardio', name: 'Average heart rate (Holter)', unit: 'bpm', alt: { '/min': 1 },
+    aliases: ['average heart rate', 'mean heart rate', 'avg hr', 'mittlere herzfrequenz', 'durchschnittliche herzfrequenz', 'keskisyke', 'середня чсс', 'средняя чсс'] },
+  { key: 'holter_hr_max', cat: 'cardio', name: 'Highest heart rate (Holter)', unit: 'bpm', alt: { '/min': 1 },
+    aliases: ['maximum heart rate', 'max heart rate', 'highest heart rate', 'max hr', 'maximale herzfrequenz', 'max hf', 'korkein syke', 'maksimisyke', 'максимальна чсс', 'максимальная чсс'] },
+  { key: 'pvc_count', cat: 'cardio', name: 'Ventricular extra beats (PVC), count', unit: '',
+    aliases: ['pvc', 'pvcs', 'ves', 'vpb', 'ventricular extrasystoles', 'ventricular ectopic beats', 'ventrikuläre extrasystolen', 'kammerextrasystolen', 'kammiolisälyönnit', 'шлуночкові екстрасистоли', 'желудочковые экстрасистолы'] },
+  { key: 'pvc_pct', cat: 'cardio', name: 'PVC burden', unit: '%',
+    aliases: ['pvc burden', 'ves burden', 'ves anteil', 'ventricular ectopy burden', 'kammiolisälyöntien osuus', 'частка шлуночкових екстрасистол'] },
+  { key: 'pac_count', cat: 'cardio', name: 'Atrial extra beats (PAC), count', unit: '',
+    aliases: ['pac', 'pacs', 'sves', 'apb', 'supraventricular extrasystoles', 'supraventrikuläre extrasystolen', 'eteislisälyönnit', 'надшлуночкові екстрасистоли', 'наджелудочковые экстрасистолы'] },
+  { key: 'pac_pct', cat: 'cardio', name: 'PAC burden', unit: '%',
+    aliases: ['pac burden', 'sves burden', 'sves anteil', 'eteislisälyöntien osuus'] },
+  { key: 'af_burden', cat: 'cardio', name: 'Atrial fibrillation burden', unit: '%',
+    aliases: ['af burden', 'afib burden', 'vorhofflimmerlast', 'vorhofflimmern anteil', 'eteisvärinän osuus', 'тягар фп', 'навантаження фп'] },
+  { key: 'pause_max', cat: 'cardio', name: 'Longest pause', unit: 's', alt: { ms: 0.001, sek: 1, sec: 1 },
+    aliases: ['longest pause', 'max pause', 'longest rr', 'längste pause', 'max rr', 'pisin tauko', 'найдовша пауза', 'максимальная пауза'] },
+  { key: 'lvef', cat: 'cardio', name: 'Ejection fraction (LVEF)', unit: '%',
+    aliases: ['lvef', 'ef', 'lv ef', 'ejection fraction', 'ef simpson', 'ef biplan', 'ejektionsfraktion', 'ejektiofraktio', 'фракція викиду', 'фракция выброса', 'фв'] },
+  { key: 'lvedd', cat: 'cardio', name: 'LV end-diastolic diameter', unit: 'mm', alt: { cm: 10 },
+    aliases: ['lvedd', 'lvidd', 'lvid d', 'lved', 'lvedd mm', 'lv enddiastolischer durchmesser', 'lvedd lvidd', 'кдр', 'кінцево діастолічний розмір', 'конечно диастолический размер'] },
+  { key: 'ivsd', cat: 'cardio', name: 'Septal thickness (IVSd)', unit: 'mm', alt: { cm: 10 },
+    aliases: ['ivsd', 'ivs d', 'ivs', 'septum', 'septumdicke', 'ivs diast', 'mšp', 'мшп', 'товщина мшп', 'толщина мжп', 'мжп'] },
+  { key: 'lavi', cat: 'cardio', name: 'LA volume index', unit: 'mL/m²', alt: { 'ml/m2': 1 },
+    aliases: ['lavi', 'la volume index', 'la vol index', 'la volumenindex', 'lav index', 'індекс об єму лп', 'индекс объема лп'] },
+  { key: 'ntprobnp', cat: 'cardio', name: 'NT-proBNP', unit: 'ng/L',
+    aliases: ['nt probnp', 'ntprobnp', 'nt pro bnp', 'probnp', 'nt пробнп', 'нт пробнп'] },
+  { key: 'troponin', cat: 'cardio', name: 'Troponin (high-sensitivity)', unit: 'ng/L',
+    aliases: ['troponin', 'hs troponin', 'troponin t hs', 'troponin i hs', 'hs tnt', 'hs tni', 'hstnt', 'hstni', 'troponiini', 'тропонін', 'тропонин'] },
+);
 
 // White cell differential: each cell type exists as % and as absolute count.
 const DIFF = [
