@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Health Records</title>
+  <meta name="description" content="Private, on-device tracker for lab results and other health records.">
+  <meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Health">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <main id="view"><p class="pad muted">Loading…</p></main>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#/" data-tab="overview"><span aria-hidden="true">◎</span>Overview</a>
+    <a href="#/reports" data-tab="reports"><span aria-hidden="true">☰</span>Reports</a>
+    <a href="#/add" data-tab="add"><span aria-hidden="true">＋</span>Add</a>
+    <a href="#/vaccines" data-tab="vaccines"><span aria-hidden="true">✚</span>Vaccines</a>
+    <a href="#/data" data-tab="data"><span aria-hidden="true">⛁</span>Data</a>
+  </nav>
+  <noscript>This app needs JavaScript.</noscript>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "health-records",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private, on-device tracker for lab results and vaccinations",
+  "type": "module",
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "icons": "node scripts/icons.mjs",
+    "test": "node --test tests/unit.test.js && node tests/e2e.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
