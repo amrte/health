@@ -8,7 +8,7 @@ import { discussButton } from './discuss.js';
 import { fmtDate, fmtRange } from './format.js';
 import { lineChart, sparkline } from './chart.js';
 import { statusChip, valueText, pageHead, openFile, thumb } from './ui.js';
-import { protectionGroups, protectionRow, vaccineSearchText } from './vaccines.js';
+import { protectionGroups, protectionRow, vaccineSearchText, dueAdvice, dueAdviceRow } from './vaccines.js';
 
 const enc = encodeURIComponent;
 let overviewQuery = '';
@@ -82,10 +82,13 @@ export function viewOverview(root) {
       }
     }
     const due = protectionGroups().filter((p) => p.status === 'overdue' || p.status === 'soon');
-    if (due.length && !overviewQuery) {
+    // Schedule advice for diseases that don't already have a due date set by you.
+    const dueTargets = new Set(due.flatMap((p) => p.last.targets ?? []));
+    const sched = state.vaccines.length ? dueAdvice().filter((a) => !dueTargets.has(a.target)) : [];
+    if ((due.length || sched.length) && !overviewQuery) {
       out.push(h('section', { class: 'group' },
         h('h2', null, 'Vaccinations due'),
-        h('div', { class: 'card list' }, due.map(protectionRow))));
+        h('div', { class: 'card list' }, due.map(protectionRow), sched.map(dueAdviceRow))));
     }
     const flagged = entries.filter((e) => e.last.status === 'high' || e.last.status === 'low');
     if (flagged.length && !overviewQuery) {

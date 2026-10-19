@@ -74,7 +74,17 @@ works offline.
   tetanus, diphtheria, whooping cough, polio).
 - Claude can read a whole vaccination booklet (Impfpass) or certificate in one
   go. Entries Claude wasn't sure about are marked for checking.
-- An "by disease" list shows the latest dose for each disease. Doses that are
+- **National schedules, Finland (THL) and Germany (STIKO) side by side.**
+  Based on your recorded doses and birth year, they cover:
+  - tetanus/diphtheria boosters (Finland: ages 25/45/65, then every 10 years;
+    Germany: every 10 years, once as Tdap)
+  - the TBE series and boosters by age
+  - yearly flu and COVID shots by age
+  - pneumococcal, shingles and RSV
+  - notes on polio, MMR and Finland's varicella catch-up
+
+  Each rule links to the THL or STIKO page it came from (`js/schedules.js`).
+- A "by disease" list shows the latest dose for each disease. Doses that are
   overdue or due within 90 days also appear on the overview.
 
 **Data**

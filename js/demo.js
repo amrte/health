@@ -85,7 +85,7 @@ export function demoData() {
     ['2021-06-02', 'FSME-Immun', ['tbe'], '3/3', '2024-06-02'],
     ['2023-04-18', 'Twinrix', ['hepa', 'hepb'], '3/3', ''],
     ['2025-11-03', 'Comirnaty', ['covid'], 'booster', ''],
-    ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', '2026-10-15'],
+    ['2025-11-03', 'Vaxigrip Tetra', ['influenza'], '', ''],
   ].map(([date, name, targets, dose, due]) => ({ id: uid(), date, name, targets, dose, lot: '', place: 'Demo clinic', due, note: '', files: [], demo: true }));
   return { reports, obs, vaccines };
 }

@@ -7,6 +7,7 @@ import { state, saveVaccines, deleteVaccine, matches } from './store.js';
 import { fmtDate, todayIso, dateMs } from './format.js';
 import { pageHead, thumb, openFile } from './ui.js';
 import { shrinkImage, copyText } from './editor.js';
+import { scheduleAdvice, SCHEDULE_SOURCES, SCHEDULE_NOTES, SCHEDULES_REVIEWED } from './schedules.js';
 
 // Diseases, with words that identify them in vaccine names and certificates.
 export const TARGETS = [
@@ -120,6 +121,49 @@ function dueChip(p) {
   return h('span', { class: 'status st-none' }, 'No next date');
 }
 
+// ---- national schedules ----------------------------------------------------
+
+function adviceChip(a) {
+  const when = a.due ? fmtDate(a.due) : '';
+  if (a.status === 'overdue') return h('span', { class: 'status st-high' }, h('span', { class: 'status-icon' }, '▲'), when ? ` Due since ${when}` : ' Due now');
+  if (a.status === 'due') return h('span', { class: 'status st-soon' }, h('span', { class: 'status-icon' }, '●'), when ? ` Due ${when}` : ' Due now');
+  if (a.status === 'ok') return h('span', { class: 'status st-normal' }, h('span', { class: 'status-icon' }, '✓'), when ? ` Next ${when}` : ' Up to date');
+  if (a.status === 'unknown') return h('span', { class: 'status st-none' }, 'Needs info');
+  return h('span', { class: 'status st-none' }, when ? `From ${when.slice(-4)}` : 'Not routine');
+}
+
+export function advice() {
+  return scheduleAdvice(state.vaccines, state.profile);
+}
+
+function adviceRow(a, { compact = false } = {}) {
+  const line = (label, x) => h('div', { class: 'advice-line' },
+    h('span', { class: 'advice-country' }, label), adviceChip(x),
+    compact ? null : h('div', { class: 'advice-text' }, x.text));
+  return h('div', { class: 'advice' },
+    h('div', { class: 'row-title' }, a.title),
+    line('Finland', a.fi), line('Germany', a.de),
+    compact ? null : h('div', { class: 'finding-src' }, 'Source: ', a.sources.flatMap((id, i) => [i ? ' · ' : '',
+      h('a', { href: SCHEDULE_SOURCES[id].url, target: '_blank', rel: 'noopener' }, SCHEDULE_SOURCES[id].short)])));
+}
+
+// Schedule items that are due or overdue in either country, for the overview.
+export function dueAdvice() {
+  return advice().filter((a) => ['overdue', 'due'].includes(a.fi.status) || ['overdue', 'due'].includes(a.de.status));
+}
+export function dueAdviceRow(a) {
+  return h('a', { class: 'row', href: '#/vaccines' }, h('div', { class: 'row-main' }, adviceRow(a, { compact: true })));
+}
+
+function schedulesSection() {
+  return h('section', { class: 'group' },
+    h('h2', null, 'National schedules — Finland (THL) and Germany (STIKO)'),
+    h('div', { class: 'card list' }, advice().map((a) => adviceRow(a))),
+    h('div', { class: 'card notes' },
+      h('ul', null, SCHEDULE_NOTES.map((n) => h('li', null, n))),
+      h('p', { class: 'muted small' }, `Adult schedules for healthy people, reviewed ${fmtDate(SCHEDULES_REVIEWED)}. Dates use your recorded vaccinations and birth year; when only the year of birth is known, mid-year is assumed.`)));
+}
+
 export function protectionRow(p) {
   return h('a', { class: 'row', href: `#/vaccine/${encodeURIComponent(p.last.id)}` },
     h('div', { class: 'row-main' },
@@ -150,9 +194,11 @@ export function viewVaccines(root) {
       h('h2', null, 'No vaccinations yet'),
       h('p', null, 'Photograph your vaccination booklet or certificate and let Claude read every entry at once, or add them one by one. Set a next-due date and the app reminds you on the overview.'),
       h('div', { class: 'btn-row' }, h('a', { class: 'btn primary', href: '#/vaccines/add' }, 'Add vaccinations'))));
+    root.append(schedulesSection());
     return;
   }
   root.append(h('section', { class: 'group' }, h('h2', null, 'By disease'), h('div', { class: 'card list' }, protectionGroups().map(protectionRow))));
+  root.append(schedulesSection());
   const list = h('div', { class: 'card list' });
   root.append(h('section', { class: 'group' }, h('h2', null, 'History'),
     h('input', { type: 'search', class: 'search', placeholder: 'Search vaccines, diseases, places', value: query, 'aria-label': 'Search vaccinations',

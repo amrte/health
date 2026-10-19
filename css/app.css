@@ -346,3 +346,12 @@ ul.sources { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap:
 .pick fieldset { border: 0; padding: 0; margin: 12px 0 0; }
 .pick legend { font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 0; }
 .summary-preview { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 ui-monospace, Menlo, monospace; color: var(--ink-2); max-height: 420px; overflow: auto; }
+
+/* vaccination schedules */
+.advice { padding: 12px 16px; }
+.advice + .advice { border-top: 1px solid var(--grid); }
+.row .advice { padding: 0; }
+.advice-line { display: grid; grid-template-columns: 5.5em 1fr; gap: 2px 8px; margin-top: 4px; align-items: baseline; }
+.advice-country { font-size: 13px; color: var(--muted); }
+.advice-text { grid-column: 2; font-size: 14px; color: var(--ink-2); }
+.notes ul { margin: 0 0 8px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); }

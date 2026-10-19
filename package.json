@@ -8,7 +8,7 @@
     "build": "node scripts/build.mjs",
     "serve": "node scripts/serve.mjs",
     "icons": "node scripts/icons.mjs",
-    "test": "node --test tests/unit.test.js tests/evaluate.test.js && node tests/e2e.mjs && node tests/dist.mjs"
+    "test": "node --test tests/unit.test.js tests/evaluate.test.js tests/schedules.test.js && node tests/e2e.mjs && node tests/dist.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.10",
