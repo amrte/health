@@ -53,7 +53,7 @@ export function viewOverview(root) {
     return;
   }
   const lastDate = state.reports.reduce((a, r) => (r.date > a ? r.date : a), '');
-  const list = h('div');
+  const list = h('div', { class: 'overview-grid' });
   root.append(
     pageHead('Health records', { actions: [h('a', { class: 'btn primary', href: '#/add' }, '+ Lab report'), state.obs.length ? discussButton() : null], sub: [`${state.reports.length} reports · ${state.obs.length} results`, lastDate ? ` · last test ${fmtDate(lastDate)}` : '', state.vaccines.length ? ` · ${state.vaccines.length} vaccinations` : ''].join('') }),
     searchBox(overviewQuery, 'Search tests, labs, notes', (q) => { overviewQuery = q; render(); }),
@@ -72,7 +72,7 @@ export function viewOverview(root) {
         .sort((a, b) => (a.level === 'alert' ? 0 : 1) - (b.level === 'alert' ? 0 : 1));
       if (important.length) {
         const shown = showAllFindings ? important : important.slice(0, 4);
-        out.push(h('section', { class: 'group' },
+        out.push(h('section', { class: 'group wide' },
           h('h2', null, 'Findings'),
           h('div', { class: 'card findings' },
             shown.map((f) => findingItem(f, { link: f.kind === 'fitness' ? '#/fitness' : f.kind === 'bp' ? '#/bp' : `#/test/${enc(f.keys[0])}` })),
@@ -81,7 +81,7 @@ export function viewOverview(root) {
               : null)));
       }
       if (!state.profile.sex || !state.profile.birthYear) {
-        out.push(h('a', { class: 'card hint-card', href: '#/data' },
+        out.push(h('a', { class: 'card hint-card wide', href: '#/data' },
           h('strong', null, 'Add your sex and birth year'),
           h('span', null, ' — some guideline limits (hemoglobin, HDL, ALT, kidney function) depend on them.')));
       }
@@ -91,13 +91,13 @@ export function viewOverview(root) {
     const dueTargets = new Set(due.flatMap((p) => p.last.targets ?? []));
     const sched = state.vaccines.length ? dueAdvice().filter((a) => !dueTargets.has(a.target)) : [];
     if ((due.length || sched.length) && !overviewQuery) {
-      out.push(h('section', { class: 'group' },
+      out.push(h('section', { class: 'group wide' },
         h('h2', null, 'Vaccinations due'),
         h('div', { class: 'card list' }, due.map(protectionRow), sched.map(dueAdviceRow))));
     }
     const flagged = entries.filter((e) => e.last.status === 'high' || e.last.status === 'low');
     if (flagged.length && !overviewQuery) {
-      out.push(h('section', { class: 'group' },
+      out.push(h('section', { class: 'group wide' },
         h('h2', null, 'Out of range at last test'),
         h('div', { class: 'card list' }, flagged.map(metricRow))));
     }
@@ -126,12 +126,15 @@ export function viewMetric(root, key) {
   const { m, pts, last } = entry;
   const unit = m.unit;
   root.append(pageHead(m.name, { back: '#/', sub: CATEGORY_NAME[m.cat] + (m.custom ? ' · not in the test catalogue' : '') }));
-  root.append(h('section', { class: 'card hero' },
-    h('div', { class: 'hero-label' }, 'Latest · ', fmtDate(last.o.date), labOf(last.o) ? ' · ' + labOf(last.o) : ''),
-    h('div', { class: 'hero-value' }, valueText(last, unit)),
-    statusChip(last.status)));
-  root.append(findingsCard(findingsFor(key), { empty: m.custom ? null : 'No findings for this test.' }));
-  root.append(h('div', { class: 'btn-row' }, discussButton(key)));
+  // Side by side on wide screens: latest value on the left, findings on the right.
+  root.append(h('div', { class: 'split' },
+    h('div', { class: 'stack' },
+      h('section', { class: 'card hero' },
+        h('div', { class: 'hero-label' }, 'Latest · ', fmtDate(last.o.date), labOf(last.o) ? ' · ' + labOf(last.o) : ''),
+        h('div', { class: 'hero-value' }, valueText(last, unit)),
+        statusChip(last.status)),
+      h('div', { class: 'btn-row' }, discussButton(key))),
+    findingsCard(findingsFor(key), { empty: m.custom ? null : 'No findings for this test.' })));
 
   const chartCard = h('section', { class: 'card' });
   root.append(chartCard);

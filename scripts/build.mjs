@@ -25,6 +25,7 @@ html = html
   .replace(/\s*<link rel="manifest"[^>]*>/, '')
   .replace(/\s*<link rel="apple-touch-icon"[^>]*>/, '')
   .replace(/<link rel="icon"[^>]*>/, `<link rel="icon" href="${icon}">`)
+  .replace(/src="icons\/icon.svg"/g, `src="${icon}"`)
   .replace(/<link rel="stylesheet" href="css\/app.css">/, () => `<style>\n${css}</style>`)
   .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `<script type="module">\n${js}</script>`);
 if (html.includes('src="js/') || html.includes('href="css/')) throw new Error('Unbundled reference left in HTML');

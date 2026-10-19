@@ -37,6 +37,16 @@ await page.goto(demo + '#/');
 await page.reload();
 await page.getByText('No results yet').waitFor();
 
+// A browser that refuses IndexedDB (like Safari for local files) still runs the app, in memory.
+const ctx2 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+await ctx2.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { get() { throw new Error('blocked'); } }); });
+const p2 = await ctx2.newPage();
+p2.on('pageerror', (e) => errors.push('no-idb: ' + e.message));
+await p2.goto(demo);
+await p2.getByText('Not saved in this browser.').waitFor();
+await p2.locator('.findings .finding').first().waitFor();
+await p2.screenshot({ path: SHOTS + 'dist-no-storage.png' });
+
 await browser.close();
 assert.deepEqual(errors, [], 'console errors');
 console.log('dist passed');

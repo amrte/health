@@ -389,3 +389,64 @@ ul.sources { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap:
 .note-card { font-size: 14px; color: var(--ink-2); background: var(--warn-bg); }
 .dna-calls { font-size: 13px; margin-top: 6px; display: grid; gap: 2px; overflow-wrap: anywhere; }
 .lv-none .finding-icon { color: var(--muted); }
+
+/* ---- layout helpers (all sizes) ---- */
+.tabs .brand, .tabs .quick { display: none; }
+.split, .stack { display: grid; gap: 14px; align-content: start; }
+.split > *, .stack > * { margin: 0; min-width: 0; }
+.chart-grid { display: grid; gap: 14px; }
+.overview-grid > * + * { margin-top: 14px; }
+
+/* ---- wide screens (MacBook and other laptops/desktops) ---- */
+@media (min-width: 960px) {
+  body { padding-bottom: 0; padding-left: 240px; }
+  .tabs {
+    top: 0; bottom: 0; right: auto; width: 240px;
+    flex-direction: column; justify-content: flex-start; align-items: stretch; gap: 2px;
+    padding: 20px 14px; border-top: 0; border-right: 1px solid var(--border);
+    background: var(--surface);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .tabs .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; padding: 4px 10px 22px; color: var(--ink); }
+  .tabs .brand img { border-radius: 7px; }
+  .tabs a { flex: none; max-width: none; flex-direction: row; align-items: center; gap: 12px; font-size: 15px; padding: 9px 10px; border-radius: 10px; color: var(--ink-2); }
+  .tabs a span { font-size: 17px; width: 22px; text-align: center; }
+  .tabs a[aria-current] { background: color-mix(in srgb, var(--accent) 13%, transparent); color: var(--accent-ink); }
+  .tabs a:not(.btn):hover { background: var(--surface-2); }
+  .tabs .quick { display: grid; gap: 8px; margin-top: auto; padding: 16px 0 4px; }
+  .tabs .quick .btn { justify-content: center; font-size: 14px; padding: 8px 10px; }
+  .tabs .quick .btn.primary { color: var(--on-accent); }
+
+  #view { max-width: 1200px; padding: 36px 48px 56px; }
+  h1 { font-size: 30px; }
+  .page > * + * { margin-top: 18px; }
+  .search { max-width: 520px; }
+
+  /* Overview: categories flow in two columns, summary sections span both. */
+  .overview-grid { columns: 2; column-gap: 20px; }
+  .overview-grid > * { break-inside: avoid; margin: 0 0 20px; }
+  .overview-grid > * + * { margin-top: 0; }
+  .overview-grid > .wide { column-span: all; }
+  .overview-grid > .hint-card { display: block; }
+
+  .split { grid-template-columns: minmax(300px, 2fr) 3fr; gap: 20px; align-items: start; }
+  .discuss-split { grid-template-columns: minmax(340px, 1fr) 1.2fr; }
+  .sticky { position: sticky; top: 24px; }
+  .discuss-split .summary-preview { max-height: calc(100vh - 140px); }
+  .chart-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+  .rows { grid-template-columns: 1fr 1fr; }
+  .thumb { width: 110px; height: 110px; }
+  .save-bar { bottom: 0; }
+  #toast { left: calc(50% + 120px); bottom: 28px; }
+  .row { padding: 12px 18px; }
+  .card { padding: 16px 20px; }
+  .card.list, .table-wrap { padding: 0; }
+  .viewer { left: 0; }
+  .viewer-scroll.zoomed img { width: 140%; }
+}
+@media (min-width: 1400px) {
+  .overview-grid { columns: 3; }
+}
+
+.memory-banner { background: var(--warn-bg); color: var(--ink); border-bottom: 1px solid var(--border); padding: 10px 16px; font-size: 14px; text-align: center; }

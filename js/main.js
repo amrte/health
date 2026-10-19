@@ -2,6 +2,7 @@
 
 import { h } from './dom.js';
 import { load } from './store.js';
+import { isMemoryOnly } from './db.js';
 import { viewOverview, viewMetric, viewReports, viewReport } from './views.js';
 import { viewEditor, editorDirty, clearDirty } from './editor.js';
 import { viewData, seedDemoOnce } from './data.js';
@@ -63,6 +64,11 @@ window.addEventListener('beforeunload', (e) => { if (editorDirty() || vaccineEdi
 try {
   await load();
   if (document.documentElement.dataset.demoSeed) await seedDemoOnce();
+  if (isMemoryOnly()) {
+    document.body.prepend(h('div', { class: 'memory-banner', role: 'alert' },
+      h('strong', null, 'Not saved in this browser. '),
+      'This browser doesn’t allow storage for files opened from disk, so changes are lost when you close the tab. Open the file in Chrome or Firefox, or use the hosted version of the app.'));
+  }
 } catch (err) {
   main.replaceChildren(h('p', { class: 'pad warn' }, 'Could not open the on-device database. Private browsing may block it. ' + (err?.message ?? '')));
   throw err;

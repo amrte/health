@@ -158,7 +158,11 @@ works offline.
 ## Trying it on a computer
 
 Download [`dist/health-records-demo.html`](dist/health-records-demo.html) and
-open it in Chrome, Edge or Firefox. It's a single self-contained file. The
+open it in Chrome, Edge or Firefox. On wide screens (MacBook and other
+laptops) the app switches to a desktop layout: a sidebar instead of the bottom
+tabs, two-column overview and charts, and side-by-side panels. If the browser
+refuses storage for local files (Safari can), the app still runs but keeps
+changes only until the tab is closed, and says so. It's a single self-contained file. The
 first time it opens, it fills itself with a fictional person: a man born in
 1980 with seven check-ups and a few vaccinations. You can remove the demo data
 on the Data tab. [`dist/health-records.html`](dist/health-records.html) is the

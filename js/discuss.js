@@ -72,7 +72,10 @@ export function viewDiscuss(root, focusKey) {
     const ok = await copyText(preview.textContent);
     toast(ok ? 'Summary copied — paste it in Claude' : 'Copy failed — try again');
   } }, 'Copy summary');
-  root.append(h('section', { class: 'card' },
+  const left = h('div', { class: 'stack' });
+  const right = h('div', { class: 'stack sticky' });
+  root.append(h('div', { class: 'split discuss-split' }, left, right));
+  left.append(h('section', { class: 'card' },
     h('label', null, h('span', { class: 'label' }, 'Your question (optional)'),
       h('textarea', { rows: 3, placeholder: 'e.g. Why does my ferritin keep falling? What should I ask my doctor?', oninput: (e) => { opts.question = e.target.value; update(); } })),
     h('div', { class: 'btn-row' }, copyBtn,
@@ -91,7 +94,7 @@ export function viewDiscuss(root, focusKey) {
         } }), e.m.name)));
     }).filter(Boolean));
   }
-  root.append(h('section', { class: 'card' },
+  left.append(h('section', { class: 'card' },
     h('div', { class: 'group-head' }, h('h2', null, 'What to include'), count),
     check('Age and sex', 'includeProfile'),
     check('What the app noted (findings)', 'includeFindings'),
@@ -104,6 +107,6 @@ export function viewDiscuss(root, focusKey) {
     testList));
   renderTests();
 
-  root.append(h('section', { class: 'group' }, h('h2', null, 'Preview'), h('div', { class: 'card' }, preview)));
+  right.append(h('section', { class: 'group' }, h('h2', null, 'Preview'), h('div', { class: 'card' }, preview)));
   update();
 }

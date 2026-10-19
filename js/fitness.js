@@ -146,12 +146,14 @@ export function viewFitness(root) {
     card.append(h('p', { class: 'caption' }, 'All recorded workouts count here. WHO recommends 150–300 minutes of moderate or 75–150 of vigorous activity a week; everyday activity outside workouts counts too.'));
   }
 
+  const charts = h('div', { class: 'chart-grid' });
+  root.append(charts);
   for (const kind of ORDER) {
     const pts = series(kind, since);
     if (!pts.length) continue;
     const k = KINDS[kind];
     const card = h('section', { class: 'card chart-card' }, h('h2', null, k.name, h('small', null, k.unit)));
-    root.append(card);
+    charts.append(card);
     lineChart(card, { pts: pts.map((p) => ({ ...p, display: fmtNum(+p.v.toFixed(k.digits)) })), unit: k.unit, height: 180 });
   }
 
