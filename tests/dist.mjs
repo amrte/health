@@ -56,6 +56,14 @@ await p2.screenshot({ path: SHOTS + 'dist-search.png' });
 await p2.keyboard.press('Enter');
 await p2.locator('h1', { hasText: 'Ferritin' }).waitFor();
 
+// The summary for the doctor fits one A4 page for the demo person.
+await p2.goto(demo + '#/print');
+await p2.locator('.print-sheet').waitFor();
+await p2.emulateMedia({ media: 'print' });
+const pdf = await p2.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true });
+const pages = (pdf.toString('latin1').match(/\/Type\s*\/Page[^s]/g) ?? []).length;
+assert.equal(pages, 1, `summary is ${pages} pages`);
+
 await browser.close();
 assert.deepEqual(errors, [], 'console errors');
 console.log('dist passed');

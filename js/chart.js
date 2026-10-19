@@ -335,3 +335,106 @@ export function bpChart(host, { days, lines = [], height = 240 }) {
   if (lastW) draw();
   new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; draw(); } }).observe(wrap);
 }
+
+// Two series on one time axis, each with its own scale (left: a, right: b).
+// a, b: { name, unit, pts: [{ t, v, o }] }. t0/t1 limit the time range.
+export function dualChart(host, { a, b, t0: from, height = 260 }) {
+  // Points in range, plus the last one before it so a sparse line enters from the left.
+  const within = (pts) => {
+    const num = pts.filter((p) => p.v != null);
+    if (!from) return num;
+    const before = num.filter((p) => p.t < from).at(-1);
+    return [...(before ? [before] : []), ...num.filter((p) => p.t >= from)];
+  };
+  const A = within(a.pts);
+  const B = within(b.pts);
+  const wrap = h('div', { class: 'chart dual', style: `height:${height}px` });
+  const tip = h('div', { class: 'tip', hidden: true });
+  host.append(wrap);
+  if (!A.length || !B.length) {
+    wrap.append(h('p', { class: 'muted chart-empty' }, `No ${!A.length ? a.name : b.name} values in this period.`));
+    return;
+  }
+  let geo;
+  const nearest = (pts, t, maxDays) => {
+    let best = null;
+    for (const p of pts) if (!best || Math.abs(p.t - t) < Math.abs(best.t - t)) best = p;
+    return best && Math.abs(best.t - t) <= maxDays * DAY ? best : null;
+  };
+  const gap = (pts) => (pts.length > 60 ? 2 : 120); // daily data: same day; lab tests: within 4 months
+
+  function show(t) {
+    const g = wrap.querySelector('.hover');
+    if (t == null || !geo) { tip.hidden = true; g?.replaceChildren(); return; }
+    const pa = nearest(A, t, gap(A));
+    const pb = nearest(B, t, gap(B));
+    const x = geo.x(t);
+    g.replaceChildren(s('line', { x1: x, x2: x, y1: geo.top, y2: geo.bottom, class: 'crosshair' }),
+      pa ? s('circle', { cx: geo.x(pa.t), cy: geo.ya(pa.v), r: 5, class: 'mk mk-active' }) : '',
+      pb ? s('circle', { cx: geo.x(pb.t), cy: geo.yb(pb.v), r: 5, class: 'mk mk-b mk-active' }) : '');
+    tip.replaceChildren(
+      h('div', { class: 'tip-meta' }, fmtDate(new Date(t).toISOString().slice(0, 10))),
+      h('div', { class: 'tip-a' }, `${a.name}: `, pa ? `${fmtNum(+pa.v.toFixed(2))} ${a.unit}` : '—', pa && Math.abs(pa.t - t) > DAY ? ` (${fmtDate(pa.o.date)})` : ''),
+      h('div', { class: 'tip-b' }, `${b.name}: `, pb ? `${fmtNum(+pb.v.toFixed(2))} ${b.unit}` : '—', pb && Math.abs(pb.t - t) > DAY ? ` (${fmtDate(pb.o.date)})` : ''));
+    tip.hidden = false;
+    const w = tip.offsetWidth;
+    tip.style.left = Math.min(Math.max(x - w / 2, 0), wrap.clientWidth - w) + 'px';
+    tip.style.top = '4px';
+  }
+
+  function draw() {
+    const W = Math.max(280, wrap.clientWidth);
+    const H = height;
+    const M = { l: 46, r: 46, t: 18, b: 28 };
+    const scale = (pts) => {
+      let min = Math.min(...pts.map((p) => p.v));
+      let max = Math.max(...pts.map((p) => p.v));
+      if (min === max) { min -= Math.abs(min) * 0.1 || 1; max += Math.abs(max) * 0.1 || 1; }
+      const pad = (max - min) * 0.08;
+      return niceTicks(min - pad, max + pad);
+    };
+    const sa = scale(A);
+    const sb = scale(B);
+    let t0 = from || Math.min(A[0].t, B[0].t);
+    let t1 = Math.max(A.at(-1).t, B.at(-1).t);
+    if (t1 - t0 < 30 * DAY) { t0 -= 15 * DAY; t1 += 15 * DAY; }
+    const tp = (t1 - t0) * 0.03;
+    if (!from) t0 -= tp;
+    t1 += tp;
+    const x = (t) => M.l + ((t - t0) / (t1 - t0)) * (W - M.l - M.r);
+    const ya = (v) => M.t + (1 - (v - sa.lo) / (sa.hi - sa.lo)) * (H - M.t - M.b);
+    const yb = (v) => M.t + (1 - (v - sb.lo) / (sb.hi - sb.lo)) * (H - M.t - M.b);
+    geo = { x, ya, yb, top: M.t, bottom: H - M.b };
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${a.name} and ${b.name} over time` });
+    const clipId = `clip-${Math.random().toString(36).slice(2)}`;
+    svg.append(s('defs', null, s('clipPath', { id: clipId }, s('rect', { x: M.l, y: 0, width: W - M.l - M.r, height: H }))));
+    const plot = s('g', { 'clip-path': `url(#${clipId})` });
+    sa.ticks.forEach((v, i) => {
+      svg.append(s('line', { x1: M.l, x2: W - M.r, y1: ya(v), y2: ya(v), class: i ? 'grid' : 'axis' }),
+        s('text', { x: M.l - 8, y: ya(v), class: 'tick tick-a', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, fmtNum(v)));
+    });
+    for (const v of sb.ticks) {
+      const yy = yb(v);
+      if (yy >= M.t - 1 && yy <= H - M.b + 1) svg.append(s('text', { x: W - M.r + 8, y: yy, class: 'tick tick-b', 'dominant-baseline': 'middle' }, fmtNum(v)));
+    }
+    const xt = timeTicks(t0, t1, Math.floor((W - M.l - M.r) / 64));
+    for (const t of xt.ticks) svg.append(s('text', { x: x(t), y: H - 8, class: 'tick', 'text-anchor': 'middle' }, xt.years ? new Date(t).getUTCFullYear() : fmtMonth(t)));
+    const path = (pts, y, cls) => s('path', { d: pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join(''), class: cls });
+    if (A.length > 1) plot.append(path(A, ya, 'line'));
+    if (B.length > 1) plot.append(path(B, yb, 'line line-b'));
+    if (A.length <= 60) for (const p of A) plot.append(s('circle', { cx: x(p.t), cy: ya(p.v), r: 4, class: 'mk' }));
+    if (B.length <= 60) for (const p of B) plot.append(s('rect', { x: x(p.t) - 3.5, y: yb(p.v) - 3.5, width: 7, height: 7, class: 'mk mk-b' }));
+    svg.append(plot);
+    svg.append(s('g', { class: 'hover' }));
+    const hit = s('rect', { x: M.l, y: 0, width: W - M.l - M.r, height: H, class: 'hit' });
+    svg.append(hit);
+    const at = (ev) => t0 + ((ev.clientX - svg.getBoundingClientRect().left - M.l) / (W - M.l - M.r)) * (t1 - t0);
+    hit.addEventListener('pointermove', (ev) => show(at(ev)));
+    hit.addEventListener('pointerdown', (ev) => show(at(ev)));
+    hit.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') show(null); });
+    wrap.replaceChildren(svg, tip);
+  }
+  let lastW = wrap.clientWidth;
+  if (lastW) draw();
+  new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; draw(); } }).observe(wrap);
+}

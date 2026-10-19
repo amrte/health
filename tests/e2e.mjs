@@ -195,6 +195,27 @@ await page.goto(base + '#/heart');
 await page.getByText('10-year heart risk (SCORE2)').waitFor();
 assert.match(await page.locator('.risk-card').textContent(), /\d+(\.\d)? %.*risk/);
 
+step('summary for the doctor');
+await page.goto(base + '#/print');
+await page.locator('.print-sheet').waitFor();
+await page.getByLabel('Name on the page (optional, not saved)').fill('Demo Person');
+const sheetText = await page.locator('.print-sheet').textContent();
+for (const s of ['Demo Person', 'Penicillin', 'Atorvastatin', 'Low iron stores', 'Ferritin', 'SCORE2']) assert.ok(sheetText.includes(s), `summary has ${s}`);
+await shot('05g-print');
+
+step('two-value charts');
+await page.goto(base + '#/compare');
+await page.getByRole('button', { name: 'Night-time heart rate & sleep' }).waitFor();
+assert.equal(await page.locator('.chart.dual .line').count(), 2, 'two lines');
+await page.getByRole('button', { name: 'Ferritin & hemoglobin' }).click();
+await page.waitForFunction(() => document.querySelectorAll('.compare-pickers select')[1]?.value === 'test:hb');
+assert.match(page.url(), /compare\/test%3Aferritin\/test%3Ahb/);
+await page.goto(base + '#/test/ldl');
+await page.getByRole('link', { name: 'Compare with…' }).click();
+await page.locator('.chart.dual svg').waitFor();
+assert.equal(await page.locator('.compare-pickers select').first().inputValue(), 'test:ldl');
+await shot('05h-compare');
+
 step('vaccinations from a Claude reply');
 await page.goto(base + '#/vaccines/add');
 await page.locator('.claude textarea').fill('```json\n' + JSON.stringify({ vaccinations: [

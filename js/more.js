@@ -5,6 +5,8 @@ import { pageHead } from './ui.js';
 
 const ITEMS = [
   ['#/search', 'Search', 'Tests, findings, vaccines, DNA, sections'],
+  ['#/print', 'Summary for the doctor', 'One page to print or save as PDF'],
+  ['#/compare', 'Compare two values', 'E.g. night-time heart rate and sleep, blood pressure and weight'],
   ['#/timeline', 'Timeline', 'Check-ups, illnesses, medicines, vaccinations by date'],
   ['#/meds', 'Medicines & allergies', 'What you take and what you react to'],
   ['#/reminders', 'Reminders & screening', 'Retests and Finnish/German screening programmes'],

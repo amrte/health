@@ -116,7 +116,7 @@ function importCard() {
 }
 
 export function viewFitness(root) {
-  root.append(pageHead('Fitness', { sub: state.measures.length || state.workouts.length
+  root.append(pageHead('Fitness', { actions: [h('a', { class: 'btn', href: '#/compare' }, 'Compare two values')], sub: state.measures.length || state.workouts.length
     ? `${state.workouts.length} workouts · ${new Set(state.measures.map((m) => m.date)).size} days of data` : 'Heart rate, sleep, activity and training from your watch' }));
   root.append(bpSummaryCard());
   if (!state.measures.length && !state.workouts.length) {

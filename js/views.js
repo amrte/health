@@ -185,7 +185,7 @@ export function viewMetric(root, key) {
         h('div', { class: 'hero-label' }, 'Latest · ', fmtDate(last.o.date), labOf(last.o) ? ' · ' + labOf(last.o) : ''),
         h('div', { class: 'hero-value' }, valueText(last, unit)),
         statusChip(last.status)),
-      h('div', { class: 'btn-row' }, discussButton(key), m.custom || m.derived ? null : remindButton(key))),
+      h('div', { class: 'btn-row' }, discussButton(key), h('a', { class: 'btn', href: `#/compare/${enc('test:' + key)}` }, 'Compare with…'), m.custom || m.derived ? null : remindButton(key))),
     findingsCard(findingsFor(key), { empty: m.custom ? null : 'No findings for this test.' })));
 
   const chartCard = h('section', { class: 'card' });

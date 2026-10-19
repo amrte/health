@@ -215,6 +215,26 @@ works offline.
   prostate, aortic aneurysm, breast, cervical, lung for heavy smokers), with
   "mark done" and the next due date. Due items appear on the overview.
 
+**Summary for the doctor**
+- One A4 page to print or save as PDF: allergies, current medicines (and
+  those stopped in the last year), diagnoses from doctor letters, illnesses
+  and surgeries, blood pressure, SCORE2, vaccinations, what the app flagged,
+  and a results table with the latest value, reference range, a small trend
+  line, the direction and the two previous values.
+- Results: the main tests plus anything out of range, or all tests from the
+  last 2 years. An optional name and your questions for the visit are
+  printed but not saved.
+
+**Compare two values**
+- Any two of: lab tests, body measurements, watch values (night-time heart
+  rate, HRV, sleep, steps…), daily blood pressure and weekly workout minutes,
+  on one timeline with a scale each.
+- Suggestions such as night-time heart rate & sleep or blood pressure &
+  weight; "Compare with…" on every test page.
+- Daily values can be smoothed to 7-day averages. With at least 8 pairs close
+  in time, the strength of the link is shown (Pearson r, from the raw
+  values), with the reminder that correlation isn't causation.
+
 **Search**
 - Searches everything:
   - tests, including their names in English, German, Finnish, Ukrainian and
@@ -335,6 +355,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/meds.js`, `js/meds-data.js` | Medicines and allergies; drug groups, allergy and DNA checks |
 | `js/score2.js` | SCORE2 risk model, risk categories, LDL goal |
 | `js/timeline.js` | Timeline and illness diary |
+| `js/print.js` | One-page summary for doctor visits |
+| `js/compare.js` | Two values on one chart, correlation |
 | `js/reminders.js`, `js/screening.js` | Reminders, suggested retests, Finnish and German screening |
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
@@ -347,7 +369,6 @@ results saved earlier.
 
 ## Planned next
 
-- A printable one-page summary for doctor visits.
 - SCORE2-OP (age 70+) once its coefficients are checked against the paper.
 
 This app doesn't give medical advice. Reference ranges come from your labs.

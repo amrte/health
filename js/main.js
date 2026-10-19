@@ -18,6 +18,8 @@ import { viewBody } from './body.js';
 import { viewMeds, viewMedEditor, viewMedsFromLetter } from './meds.js';
 import { viewTimeline, viewEventEditor } from './timeline.js';
 import { viewReminders } from './reminders.js';
+import { viewPrint } from './print.js';
+import { viewCompare } from './compare.js';
 import { viewVaccines, viewVaccine, viewVaccineEditor, vaccineEditorDirty, clearVaccineDirty } from './vaccines.js';
 
 const ROUTES = [
@@ -35,6 +37,8 @@ const ROUTES = [
   [/^#\/timeline$/, (root) => viewTimeline(root), 'timeline'],
   [/^#\/timeline\/edit\/(.+)$/, (root, id) => viewEventEditor(root, id), 'timeline'],
   [/^#\/reminders$/, (root) => viewReminders(root), 'reminders'],
+  [/^#\/print$/, (root) => viewPrint(root), 'print'],
+  [/^#\/compare(?:\/([^/]+)(?:\/([^/]+))?)?$/, (root, a, b) => viewCompare(root, a, b), 'fitness'],
   [/^#\/fitness$/, (root) => viewFitness(root), 'fitness'],
   [/^#\/bp$/, (root) => viewBp(root), 'fitness'],
   [/^#\/dna$/, (root) => viewDna(root), 'reports'],
@@ -70,8 +74,8 @@ async function route() {
   }
   current = location.hash;
   const [re, view, tab] = ROUTES.find(([re]) => re.test(location.hash)) ?? ROUTES[0];
-  const arg = location.hash.match(re)?.[1];
-  const viaMore = ['heart', 'body', 'meds', 'timeline', 'reminders', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
+  const args = (location.hash.match(re) ?? []).slice(1).map((x) => (x ? decodeURIComponent(x) : undefined));
+  const viaMore = ['heart', 'body', 'meds', 'timeline', 'reminders', 'print', 'teeth', 'dna', 'data', 'search', 'more'].includes(tab);
   for (const a of document.querySelectorAll('.tabs a')) a.toggleAttribute('aria-current', a.dataset.tab === tab || (a.dataset.tab === 'more' && viaMore));
   const root = h('div', { class: 'page' });
   main.replaceChildren(root);
@@ -79,7 +83,7 @@ async function route() {
   const side = document.querySelector('.tabs .side-search');
   if (side && tab !== 'search') side.value = '';
   try {
-    await view(root, arg ? decodeURIComponent(arg) : undefined);
+    await view(root, ...args);
   } catch (err) {
     console.error(err);
     root.append(h('p', { class: 'pad warn' }, 'Something went wrong: ' + (err?.message ?? err)));

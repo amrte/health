@@ -28,6 +28,8 @@ const SECTIONS = [
   ['DNA', '#/dna', 'dna genetics 23andme tellmegen genome днк генетика геном'],
   ['Body', '#/body', 'body weight waist bmi body composition fat muscle inbody tanita scale тіло вага талія жир м’язи склад тіла'],
   ['Medicines & allergies', '#/meds', 'medicines medications drugs pills supplements vitamins allergy allergies intolerance prescription ліки препарати вітаміни алергія рецепт'],
+  ['Summary for the doctor', '#/print', 'print summary doctor visit appointment pdf one page друк підсумок лікар візит'],
+  ['Compare two values', '#/compare', 'compare chart two values correlation sleep heart rate weight blood pressure порівняти графік кореляція'],
   ['Timeline', '#/timeline', 'timeline history diary illness sick cold flu infection surgery travel хронологія історія щоденник хвороба застуда грип операція подорож'],
   ['Reminders & screening', '#/reminders', 'reminders retest screening check-up colonoscopy mammography cancer нагадування повторити скринінг обстеження'],
   ['Teeth', '#/teeth', 'teeth dental dentist tooth x-ray bill filling crown зуби стоматолог зуб рентген пломба коронка'],

@@ -152,3 +152,32 @@ test('timeline and illness periods', () => {
   assert.deepEqual(timelineItems(st).map((x) => x.title), ['Stopped Retafer', 'Started Retafer', 'Lab results · Lab', 'Vaccination: Comirnaty', 'Flu']);
   assert.deepEqual(illnessPeriods(st.events), [{ start: '2025-02-03', end: '2025-02-10', label: 'Flu (3 Feb 2025)', kind: 'ill' }]);
 });
+
+test('two-value charts: smoothing and correlation', async () => {
+  const { smooth, correlation, correlationText } = await import('../js/compare.js');
+  const day = (i) => Date.UTC(2026, 0, 1) + i * 864e5;
+  const a = Array.from({ length: 30 }, (_, i) => ({ t: day(i), v: 50 + (i % 5) }));
+  const b = a.map((p) => ({ t: p.t, v: 8 - (p.v - 50) * 0.2 }));
+  const c = correlation(a, b, 0);
+  assert.equal(c.n, 30);
+  assert.ok(c.r < -0.99, 'perfect negative link');
+  assert.match(correlationText(c, { name: 'Night-time heart rate' }, { name: 'Sleep' }), /^A strong link \(r = -1.00, 30 pairs\): higher night-time heart rate tends to go with lower sleep/);
+  assert.equal(correlation(a.slice(0, 5), b.slice(0, 5), 0), null, 'needs 8 pairs');
+  assert.equal(correlation(a, b.map((p) => ({ ...p, t: p.t + 10 * 864e5 })).slice(20), 3), null, 'pairs must be close in time');
+  const sm = smooth([{ t: day(0), v: 10 }, { t: day(1), v: 20 }, { t: day(10), v: 30 }], 7);
+  assert.deepEqual(sm.map((p) => p.v), [10, 15, 30]);
+});
+
+test('summary for the doctor: tests and diagnoses', async () => {
+  const { summaryTests, diagnosesFrom } = await import('../js/print.js');
+  const by = data([['hb', '2025-01-10', 150], ['hb', '2026-05-12', 140], ['ferritin', '2026-05-12', 27, 'µg/L', '30–400'], ['mcv', '2026-05-12', 88],
+    ['bmi', '2026-04-21', 26.3], ['bmi_calc', '2026-09-28', 26.1], ['qtc', '2026-05-12', 430], ['chol', '2019-01-01', 6]]);
+  const t = summaryTests(by, { today: '2026-10-19' });
+  assert.deepEqual(t.map((x) => x.e.m.key).sort(), ['bmi_calc', 'ferritin', 'hb'], 'key tests and flagged ones, newer BMI only, no ECG values, nothing older than 2 years');
+  const hb = t.find((x) => x.e.m.key === 'hb');
+  assert.equal(hb.trend, '↓');
+  assert.deepEqual(hb.prev.map((p) => p.v), [150]);
+  assert.ok(summaryTests(by, { mode: 'all', today: '2026-10-19' }).some((x) => x.e.m.key === 'mcv'), 'all tests mode');
+  const d = diagnosesFrom([{ date: '2025-04-10', diagnoses: ['Palpitations'], specialty: 'Cardiology' }, { date: '2026-05-20', diagnoses: ['Low iron stores', 'palpitations '] }]);
+  assert.deepEqual(d.map((x) => [x.text, x.date]), [['Low iron stores', '2026-05-20'], ['palpitations', '2026-05-20']]);
+});
