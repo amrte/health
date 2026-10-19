@@ -2,10 +2,14 @@
 
 import { PANELS, readSnp } from './dna-variants.js';
 
+// Prefers a genotype read from a file over one taken as the reference genome (VCF).
 const lookup = (genomes) => (rsid) => {
-  for (const g of genomes) {
-    const r = readSnp(rsid, g.snps?.[rsid]);
-    if (r && r.count != null) return r;
+  for (const pass of [false, true]) {
+    for (const g of genomes) {
+      if (!!g.inferred?.includes(rsid) !== pass) continue;
+      const r = readSnp(rsid, g.snps?.[rsid]);
+      if (r && r.count != null) return r;
+    }
   }
   return null;
 };

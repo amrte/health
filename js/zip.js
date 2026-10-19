@@ -42,13 +42,17 @@ export async function listZip(blob) {
 }
 
 export async function readEntry(blob, entry) {
+  return new Response(await entryStream(blob, entry)).text();
+}
+
+// The entry's uncompressed bytes as a stream, for entries too large for one string.
+export async function entryStream(blob, entry) {
   const head = await bytes(blob, entry.localOffset, entry.localOffset + 30);
   const hv = new DataView(head.buffer, head.byteOffset);
   if (hv.getUint32(0, true) !== 0x04034b50) throw new Error(`Damaged ZIP entry ${entry.name}`);
   const start = entry.localOffset + 30 + hv.getUint16(26, true) + hv.getUint16(28, true);
   const data = blob.slice(start, start + entry.compSize);
-  if (entry.method === 0) return data.text();
+  if (entry.method === 0) return data.stream();
   if (entry.method !== 8) throw new Error(`Unsupported compression in ${entry.name}`);
-  const stream = data.stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Response(stream).text();
+  return data.stream().pipeThrough(new DecompressionStream('deflate-raw'));
 }

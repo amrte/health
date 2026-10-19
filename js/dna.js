@@ -1,4 +1,4 @@
-// DNA: import raw data from 23andMe / tellmeGen and explain a short list of variants.
+// DNA: import raw data (23andMe, tellmeGen, VCF from sequencing) and explain a short list of variants.
 
 import { h, toast, go } from './dom.js';
 import { state, saveGenome, deleteGenome } from './store.js';
@@ -11,12 +11,18 @@ import { getMetric } from './metrics.js';
 const LEVEL = { alert: ['▲', 'Discuss with a doctor'], attention: ['●', 'Worth a look'], info: ['ℹ', 'Good to know'], good: ['✓', 'Nothing notable'] };
 let showSensitive = false;
 
-// Genotype lookup that prefers the first genome having a usable call.
+const isInferred = (g, rsid) => !!g.inferred?.includes(rsid);
+
+// Genotype lookup that prefers the first genome having a usable call, and a call
+// read from a file over one taken as the reference genome.
 function lookup(genomes) {
   return (rsid) => {
-    for (const g of genomes) {
-      const r = readSnp(rsid, g.snps[rsid]);
-      if (r && r.count != null) return { ...r, provider: g.provider };
+    for (const pass of [false, true]) {
+      for (const g of genomes) {
+        if (isInferred(g, rsid) !== pass) continue;
+        const r = readSnp(rsid, g.snps[rsid]);
+        if (r && r.count != null) return { ...r, provider: g.provider };
+      }
     }
     return null;
   };
@@ -47,7 +53,7 @@ function callsLine(panel, genomes) {
     const s = SNPS[rsid];
     const per = genomes.map((gm) => {
       const r = readSnp(rsid, gm.snps[rsid]);
-      return `${gm.provider}: ${r ? r.gt + (r.flipped ? ' (strand flipped)' : '') + (r.unexpected ? ' (unexpected alleles)' : '') : 'not tested'}`;
+      return `${gm.provider}: ${r ? r.gt + (r.flipped ? ' (strand flipped)' : '') + (r.unexpected ? ' (unexpected alleles)' : '') + (isInferred(gm, rsid) ? ' (not listed, so same as the reference genome)' : '') : 'not tested'}`;
     });
     return h('div', null, h('strong', null, `${s.gene} ${s.name}`), h('span', { class: 'muted' }, ` ${rsid} · ${per.join(' · ')}`));
   }));
@@ -75,18 +81,19 @@ function panelCard(panel, result, genomes) {
 
 function importCard() {
   const status = h('p', { class: 'muted small', role: 'status' });
-  const input = h('input', { type: 'file', accept: '.zip,.txt,.csv,.tsv,application/zip,text/plain,text/csv', class: 'offscreen', id: 'dna-in',
+  const input = h('input', { type: 'file', accept: '.zip,.txt,.csv,.tsv,.vcf,.gz,application/zip,application/gzip,text/plain,text/csv', class: 'offscreen', id: 'dna-in',
     onchange: async (e) => {
       const file = e.target.files[0];
       e.target.value = '';
       if (!file) return;
       status.textContent = 'Reading the file…';
       try {
-        const res = await readGenomeFile(file, WANTED, BY_POSITION);
+        const res = await readGenomeFile(file, WANTED, BY_POSITION, SNPS, (f) => { status.textContent = `Reading the file… ${Math.round(f * 100)} %`; });
         const genome = { id: `genome:${res.provider}`, provider: res.provider, fileName: res.fileName, importedAt: new Date().toISOString(),
-          build: res.build, total: res.total, snps: res.snps };
+          build: res.build, total: res.total, snps: res.snps, format: res.format, inferred: res.inferred };
         await saveGenome(genome);
-        toast(`${res.provider}: ${Object.keys(res.snps).length} of ${WANTED.size} variants found`);
+        const n = Object.keys(res.snps).length;
+        toast(`${res.provider}: ${n} of ${WANTED.size} variants found${res.inferred?.length ? ` (${res.inferred.length} same as the reference genome)` : ''}`);
         go('#/dna');
       } catch (err) {
         console.error(err);
@@ -97,7 +104,8 @@ function importCard() {
     h('h2', null, 'Import raw DNA data'),
     h('ul', { class: 'steps plain' },
       h('li', null, h('strong', null, '23andMe: '), 'request the raw data download in your account settings. You receive a ZIP with a .txt file.'),
-      h('li', null, h('strong', null, 'tellmeGen: '), 'Settings → Kits → Download raw data. You receive a ZIP with a .csv file (Starter and Advanced kits).')),
+      h('li', null, h('strong', null, 'tellmeGen: '), 'Settings → Kits → Download raw data. You receive a ZIP with a .csv file (Starter and Advanced kits).'),
+      h('li', null, h('strong', null, 'Genome sequencing (Dante, Nebula and others): '), 'the VCF file with your variants (.vcf or .vcf.gz, a few hundred MB). Choose the SNP/“variants” VCF, not the BAM/CRAM or FASTQ files. GRCh37 and GRCh38 both work. Reading a whole genome takes a minute or two.')),
     h('div', { class: 'btn-row' }, h('label', { class: 'btn primary', for: 'dna-in' }, 'Choose raw data file…'), input),
     status,
     h('p', { class: 'hint' }, `The file is read on this device. Only the ${WANTED.size} positions explained below are kept — the rest of your genome is not stored. Import both providers to compare them.`));
@@ -106,6 +114,7 @@ function importCard() {
 export function viewDna(root) {
   root.append(pageHead('DNA', { back: '#/reports', sub: 'A few well-studied variants from your raw data' }));
   const genomes = [...state.genomes].sort((a, b) => a.provider.localeCompare(b.provider));
+  const vcf = genomes.some((g) => g.format === 'VCF');
 
   root.append(h('section', { class: 'card note-card' },
     h('strong', null, 'Read this first. '),
@@ -120,7 +129,7 @@ export function viewDna(root) {
   root.append(h('section', { class: 'card list' }, genomes.map((g) => h('div', { class: 'row' },
     h('div', { class: 'row-main' },
       h('div', { class: 'row-title' }, g.provider),
-      h('div', { class: 'row-meta' }, `${g.fileName} · ${g.total.toLocaleString('en')} markers in file · ${Object.keys(g.snps).length} of ${WANTED.size} used · imported ${fmtDate(g.importedAt.slice(0, 10))}${g.build ? ' · ' + g.build : ''}`)),
+      h('div', { class: 'row-meta' }, `${g.fileName} · ${g.total.toLocaleString('en')} ${g.format === 'VCF' ? 'lines' : 'markers'} in file · ${Object.keys(g.snps).length} of ${WANTED.size} used · imported ${fmtDate(g.importedAt.slice(0, 10))}${g.build ? ' · ' + g.build : ''}`)),
     h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remove ${g.provider} data`, onclick: async () => {
       if (!confirm(`Remove the ${g.provider} DNA data from this device?`)) return;
       await deleteGenome(g.id);
@@ -143,6 +152,7 @@ export function viewDna(root) {
     root.append(h('section', { class: 'group' }, h('h2', null, cat === 'Medicines' ? 'Medicines (pharmacogenetics)' : cat),
       h('div', { class: 'card findings' }, items.map((x) => panelCard(x.panel, x.result, genomes)))));
   }
-  root.append(h('p', { class: 'muted small pad' }, `Variant explanations reviewed ${fmtDate(DNA_REVIEWED)}. Genotypes are read on the GRCh37 plus strand, as both providers report them. A missing variant means it wasn’t on the chip, not that you don’t have it.`));
+  root.append(h('p', { class: 'muted small pad' }, `Variant explanations reviewed ${fmtDate(DNA_REVIEWED)}. Genotypes are read on the plus strand, as the providers report them. A missing variant means it wasn’t on the chip, not that you don’t have it.`,
+    vcf ? ' Sequencing VCF files list only where you differ from the reference genome, so a position not listed in a whole-genome file is taken as the reference — but only where the reference is the normal allele; a variant is never assumed from a missing line. A position with too few reads looks the same as “not listed”, so confirm anything important in a clinical lab.' : ''));
   root.append(importCard());
 }

@@ -1,6 +1,6 @@
 // Offline support. Network first, so the page, styles and scripts always come from
 // the same version; the cache is the fallback when offline or the network is slow.
-const CACHE = 'health-records-v20';
+const CACHE = 'health-records-v21';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/main.js', 'js/dom.js', 'js/db.js', 'js/store.js', 'js/format.js', 'js/units.js', 'js/metrics.js',

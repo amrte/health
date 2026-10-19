@@ -98,11 +98,21 @@ works offline.
   - A reading of 180/110 or more triggers an alert, with the AHA advice on
     symptoms that need emergency care.
 
-**DNA (23andMe, tellmeGen)**
-- Import the raw data file (ZIP, TXT or CSV). It's read on the device, and
-  only the 16 positions the app explains are kept; the rest of the genome is
-  never stored. Rows are matched by rsID or by chromosome position, since
-  both providers sometimes use their own IDs.
+**DNA (23andMe, tellmeGen, VCF from genome sequencing)**
+- Import the raw data file (ZIP, TXT or CSV) or a VCF file from sequencing
+  (Dante, Nebula and others: `.vcf`, bgzip `.vcf.gz`, or either in a ZIP). It's
+  read on the device, and only the 16 positions the app explains are kept;
+  the rest of the genome is never stored. Rows are matched by rsID or by
+  chromosome position, since providers sometimes use their own IDs or none.
+- VCF: GRCh37 and GRCh38 are both supported (the build is read from the
+  header). Genotypes come from the file's REF/ALT and GT; filtered calls
+  (FILTER other than PASS) are not used; gVCF reference blocks count as
+  reference calls. A whole-genome VCF lists only differences from the
+  reference, so an unlisted position is taken as the reference genotype and
+  marked as such — but only where the reference is the normal allele, so a
+  variant is never assumed from a missing line (on GRCh37 the reference
+  carries factor V Leiden and ACTN3 577X). A whole genome (about 100 MB
+  compressed) takes about 15 seconds on a laptop.
 - Variants:
   - **Health:** HFE haemochromatosis (C282Y, H63D); factor V Leiden and
     prothrombin G20210A
@@ -111,7 +121,7 @@ works offline.
   - **Traits:** lactose tolerance (LCT), ACTN3, MTHFR (with the ACMG note on
     its limited use)
   - **APOE:** hidden until you explicitly choose to see it
-- Genotypes are read on the GRCh37 plus strand. Factor V Leiden and ACTN3 are
+- Genotypes are read on the plus strand. Factor V Leiden and ACTN3 are
   handled specially, because the reference sequence itself carries the
   variant. Files reported on the opposite strand are detected where possible.
 - With files from both providers, the app shows where they agree and where

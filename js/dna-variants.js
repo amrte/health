@@ -21,24 +21,27 @@ export const DNA_SOURCES = {
   dtc_fp: { short: 'Tandy-Connor 2018', title: 'False-positive results released by direct-to-consumer genetic tests (Genet Med 2018;20:1515–1521)', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC6301953/' },
 };
 
-// Each SNP: normal and variant allele on the plus strand, GRCh37 position.
+// Each SNP: normal and variant allele on the plus strand; GRCh37 position (pos) and
+// GRCh38 position (pos38, for whole-genome VCF files). The reference genome carries
+// the normal allele, except where ref37 says otherwise (GRCh38 has the normal allele
+// at all of these). GRCh38 positions checked against PharmCAT, LOVD and MGeND.
 export const SNPS = {
-  rs1800562: { gene: 'HFE', name: 'C282Y', chrom: '6', pos: 26093141, normal: 'G', variant: 'A' },
-  rs1799945: { gene: 'HFE', name: 'H63D', chrom: '6', pos: 26091179, normal: 'C', variant: 'G' },
-  rs6025: { gene: 'F5', name: 'factor V Leiden', chrom: '1', pos: 169519049, normal: 'C', variant: 'T' },
-  rs1799963: { gene: 'F2', name: 'prothrombin G20210A', chrom: '11', pos: 46761055, normal: 'G', variant: 'A' },
-  rs4149056: { gene: 'SLCO1B1', name: 'c.521T>C (*5)', chrom: '12', pos: 21331549, normal: 'T', variant: 'C' },
-  rs4244285: { gene: 'CYP2C19', name: '*2', chrom: '10', pos: 96541616, normal: 'G', variant: 'A' },
-  rs4986893: { gene: 'CYP2C19', name: '*3', chrom: '10', pos: 96540410, normal: 'G', variant: 'A' },
-  rs12248560: { gene: 'CYP2C19', name: '*17', chrom: '10', pos: 96521657, normal: 'C', variant: 'T' },
-  rs9923231: { gene: 'VKORC1', name: '−1639G>A', chrom: '16', pos: 31107689, normal: 'C', variant: 'T' },
-  rs1799853: { gene: 'CYP2C9', name: '*2', chrom: '10', pos: 96702047, normal: 'C', variant: 'T' },
-  rs1057910: { gene: 'CYP2C9', name: '*3', chrom: '10', pos: 96741053, normal: 'A', variant: 'C' },
-  rs1801133: { gene: 'MTHFR', name: 'C677T', chrom: '1', pos: 11856378, normal: 'G', variant: 'A' },
-  rs4988235: { gene: 'LCT', name: '−13910C>T', chrom: '2', pos: 136608646, normal: 'G', variant: 'A' },
-  rs1815739: { gene: 'ACTN3', name: 'R577X', chrom: '11', pos: 66328095, normal: 'C', variant: 'T' },
-  rs429358: { gene: 'APOE', name: 'rs429358', chrom: '19', pos: 45411941, normal: 'T', variant: 'C' },
-  rs7412: { gene: 'APOE', name: 'rs7412', chrom: '19', pos: 45412079, normal: 'C', variant: 'T' },
+  rs1800562: { gene: 'HFE', name: 'C282Y', chrom: '6', pos: 26093141, pos38: 26092913, normal: 'G', variant: 'A' },
+  rs1799945: { gene: 'HFE', name: 'H63D', chrom: '6', pos: 26091179, pos38: 26090951, normal: 'C', variant: 'G' },
+  rs6025: { gene: 'F5', name: 'factor V Leiden', chrom: '1', pos: 169519049, pos38: 169549811, normal: 'C', variant: 'T', ref37: 'T' },
+  rs1799963: { gene: 'F2', name: 'prothrombin G20210A', chrom: '11', pos: 46761055, pos38: 46739505, normal: 'G', variant: 'A' },
+  rs4149056: { gene: 'SLCO1B1', name: 'c.521T>C (*5)', chrom: '12', pos: 21331549, pos38: 21178615, normal: 'T', variant: 'C' },
+  rs4244285: { gene: 'CYP2C19', name: '*2', chrom: '10', pos: 96541616, pos38: 94781859, normal: 'G', variant: 'A' },
+  rs4986893: { gene: 'CYP2C19', name: '*3', chrom: '10', pos: 96540410, pos38: 94780653, normal: 'G', variant: 'A' },
+  rs12248560: { gene: 'CYP2C19', name: '*17', chrom: '10', pos: 96521657, pos38: 94761900, normal: 'C', variant: 'T' },
+  rs9923231: { gene: 'VKORC1', name: '−1639G>A', chrom: '16', pos: 31107689, pos38: 31096368, normal: 'C', variant: 'T' },
+  rs1799853: { gene: 'CYP2C9', name: '*2', chrom: '10', pos: 96702047, pos38: 94942290, normal: 'C', variant: 'T' },
+  rs1057910: { gene: 'CYP2C9', name: '*3', chrom: '10', pos: 96741053, pos38: 94981296, normal: 'A', variant: 'C' },
+  rs1801133: { gene: 'MTHFR', name: 'C677T', chrom: '1', pos: 11856378, pos38: 11796321, normal: 'G', variant: 'A' },
+  rs4988235: { gene: 'LCT', name: '−13910C>T', chrom: '2', pos: 136608646, pos38: 135851076, normal: 'G', variant: 'A' },
+  rs1815739: { gene: 'ACTN3', name: 'R577X', chrom: '11', pos: 66328095, pos38: 66560624, normal: 'C', variant: 'T', ref37: 'T' },
+  rs429358: { gene: 'APOE', name: 'rs429358', chrom: '19', pos: 45411941, pos38: 44908684, normal: 'T', variant: 'C' },
+  rs7412: { gene: 'APOE', name: 'rs7412', chrom: '19', pos: 45412079, pos38: 44908822, normal: 'C', variant: 'T' },
 };
 
 export const WANTED = new Set(Object.keys(SNPS));
