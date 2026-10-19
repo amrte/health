@@ -59,7 +59,14 @@ export function parseRange(raw) {
 }
 
 function parseRangeExact(raw) {
-  const s = String(raw ?? '').trim().replace(/\s+/g, ' ');
+  let s = String(raw ?? '').trim().replace(/\s+/g, ' ');
+  // Separate min and max columns: "(3.3   8.2)", "145 360".
+  const cols = s.replace(/^\((.*)\)$/, '$1').trim().match(new RegExp(String.raw`^${NUM}\s+${NUM}$`));
+  if (cols) {
+    const [lo, hi] = [parseNumber(cols[1]), parseNumber(cols[2])];
+    if (lo < hi) return { low: lo, high: hi };
+  }
+  s = s.replace(/^\((.*)\)$/, '$1').trim();
   let m = s.match(RANGE);
   if (m) return { low: parseNumber(m[1]), high: parseNumber(m[2]) };
   m = s.match(UPPER);
@@ -148,7 +155,7 @@ ${doc ? 'Summarise the document and extract every measured value' : 'Extract eve
 
 Rules:
 - Copy values, units and reference ranges exactly as printed. Do not convert units. Decimal commas are fine.
-- One entry per result. If a value is shown for several dates, add one entry per date with that row's "date".${type === 'lab' ? '\n- White cell types come as percent and as absolute count: use the _pct key for % and the _abs key for counts.\n- Use the sample date (when the blood was taken) for "date", not the print date.' : ''}${type === 'body' ? `
+- One entry per result. If a value is shown for several dates, add one entry per date with that row's "date".${type === 'lab' ? '\n- White cell types come as percent and as absolute count: use the _pct key for % and the _abs key for counts.\n- Use the sample date (when the blood was taken) for "date", not the print or completion date (e.g. Finnish "Lähete"/"Näytteenotto", not "Valmis"; German "Abnahme", not "Befund").\n- When min and max are printed in separate columns, write "min–max"; with only max "< max", with only min "> min".\n- Skip lines without a result, such as panel or order names (e.g. "B -PVK+T" with "." or "Lomake").' : ''}${type === 'body' ? `
 - Many body composition reports print the previous measurement next to the current one. Use the line "change since the previous measurement" (e.g. "Muutos edelliseen mittaukseen", "Veränderung") to tell which value is current. Give current values with the report date; give a previous value as its own entry only if its date is printed, otherwise leave it out.
 - "ref": the device's normal range for that value, e.g. "62–83.8". The two numbers under a bar are usually its range.
 - For segmental values (arms, trunk, legs) give the mass in kg; leave out the percentages of the reference shown under them. Leave out calorie tables for activities, and goals such as "fat mass target".` : ''}${type === 'holter' ? '\n- For extra beats give both the count (pvc_count, pac_count) and the share of all beats in % (pvc_pct, pac_pct) when shown. If atrial fibrillation is reported, give af_burden in %; if the report says there was none, give 0.' : ''}${doc ? '\n- Don’t interpret beyond the document; keep diagnoses and advice as the doctor wrote them.' : ''}
@@ -289,6 +296,8 @@ export function parseExtraction(text) {
       if (!r || typeof r !== 'object') continue;
       const row = toRow(r);
       if (!row.date && docDate && docDate !== date) row.date = docDate;
+      // Panel or order lines without a result ("B -PVK+T  .  Lomake").
+      if (/^[\s.\-–—*\/]*$/.test(row.valueRaw)) continue;
       if (row.name || row.metric) rows.push(row);
     }
   }

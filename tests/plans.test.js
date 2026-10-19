@@ -298,3 +298,18 @@ test('Finnish lab app: codes, Finnish names and one-number bars', async () => {
   for (const [n, u, k] of cases) assert.equal(matchMetric(n, u, 1), k, n);
   assert.match(buildPrompt('lab'), /with only one number, the normal \(green\) side gives the direction/);
 });
+
+test('Finnish paper report: min/max columns, order lines, date columns', async () => {
+  const { parseRange, parseExtraction, buildPrompt } = await import('../js/parse.js');
+  const { matchMetric } = await import('../js/metrics.js');
+  assert.deepEqual(parseRange('(3.3   8.2)'), { low: 3.3, high: 8.2 });
+  assert.deepEqual(parseRange('( 145 360 )'), { low: 145, high: 360 });
+  assert.deepEqual(parseRange('8.2 3.3'), { low: null, high: null }, 'min must be below max');
+  assert.deepEqual(parseRange('( 50 )'), { low: null, high: null }, 'a lone number is ambiguous');
+  const res = parseExtraction('```json\n' + JSON.stringify({ date: '2021-04-01', results: [
+    { name: 'B -PVK+T', value: '.', unit: 'Lomake' }, { name: 'S -ALAT', value: '27', unit: 'U/l', ref: '< 50' }, { name: 'fB-Leukosyytit', value: '5.4', unit: 'E9/l', ref: '(3.3 8.2)' }] }) + '\n```');
+  assert.deepEqual(res.rows.map((r) => [r.name, r.metric]), [['S -ALAT', 'alt'], ['fB-Leukosyytit', 'wbc']]);
+  for (const [n, k] of [['S -D-25', 'vitd'], ['S -T4-V', 'ft4'], ['B -Trombosyytit', 'plt'], ['E -MCHC', 'mchc']]) assert.equal(matchMetric(n, '', 1), k, n);
+  assert.match(buildPrompt('lab'), /not "Valmis"/);
+  assert.match(buildPrompt('lab'), /with only max "< max"/);
+});
