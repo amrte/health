@@ -41,6 +41,9 @@ export function normUnit(unit) {
   // Upper-case G/l and T/l are giga and tera (cell counts); lower-case g/l is grams.
   if (/^G\s*\/\s*l$/i.test(s) && s[0] === 'G') return '10^9/l';
   if (/^T\s*\/\s*l$/i.test(s) && s[0] === 'T') return '10^12/l';
+  // Same in Cyrillic: Г/л = 10⁹/L, Т/л = 10¹²/L (lower-case г/л is grams).
+  if (/^Г\s*\/\s*л$/.test(s)) return '10^9/l';
+  if (/^Т\s*\/\s*л$/i.test(s)) return '10^12/l';
   s = s.toLowerCase().replace(/\s+/g, '').replace(/[µμ]/g, 'u').replace(/,/g, '.');
   s = s.replace(/10([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, d) => '10^' + [...d].map((c) => SUP.indexOf(c)).join(''));
   s = s.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (c) => String(SUP.indexOf(c)));
@@ -60,22 +63,40 @@ export function prepareUnits(metric) {
   return metric;
 }
 
+// Labs print the unit twice: "г/л (x 10^9/L)", "фл (fL)", "мм/год (mm/hr)".
+// The whole string first, then each half.
+export function unitForms(unit) {
+  const s = String(unit ?? '').trim();
+  const m = s.match(/^(.+?)\s*\((.+)\)\s*$/);
+  return m ? [s, m[1], m[2]] : [s];
+}
+
+const fits = (nu, metric) => !nu || nu === metric.cu || nu in metric.altN;
+
+// The form of `unit` the metric understands, normalised; null if none.
+export function unitFor(unit, metric) {
+  if (!metric || metric.cu == null) return null;
+  for (const f of unitForms(unit)) {
+    const nu = normUnit(f);
+    if (fits(nu, metric)) return nu;
+  }
+  return null;
+}
+
 // True when a value in `unit` can be shown in the metric's canonical unit.
 export function canConvert(unit, metric) {
-  if (!metric || metric.cu == null) return false;
-  const nu = normUnit(unit);
-  return !nu || nu === metric.cu || nu in metric.altN;
+  return unitFor(unit, metric) != null;
 }
 
 // Converts value from `unit` to the metric's canonical unit. Returns null when
 // the unit is unknown for that metric. A missing unit is taken as canonical.
 export function convert(value, unit, metric) {
   if (value == null || !Number.isFinite(value) || !metric) return null;
-  const nu = normUnit(unit);
+  const nu = unitFor(unit, metric);
+  if (nu == null) return null;
   if (!nu) return metric.unitless ? metric.unitless(value) : value;
   if (nu === metric.cu) return value;
-  const f = metric.altN?.[nu];
-  if (f == null) return null;
+  const f = metric.altN[nu];
   return Array.isArray(f) ? value * f[0] + f[1] : value * f;
 }
 

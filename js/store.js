@@ -6,7 +6,7 @@
 
 import * as db from './db.js';
 import { getMetric, normName, CATEGORY_NAME } from './metrics.js';
-import { normUnit, convert } from './units.js';
+import { normUnit, convert, unitFor } from './units.js';
 import { parseValue, parseRange, textStatus, tidyStored } from './parse.js';
 import { dateMs } from './format.js';
 import { calculatedObs } from './calc.js';
@@ -88,7 +88,7 @@ export function point(o, m) {
     v,
     lo: m ? convert(rg.low, o.unit, m) : null,
     hi: m ? convert(rg.high, o.unit, m) : null,
-    converted: !!m && pv.value != null && normUnit(o.unit) !== m.cu && normUnit(o.unit) !== '',
+    converted: !!m && pv.value != null && ![m.cu, '', null].includes(unitFor(o.unit, m)),
     unconvertible: pv.value != null && v == null,
     status: (pv.value == null && textStatus(o.valueRaw, o.refRaw)) || statusOf(pv.value, rg.low, rg.high, o.flag || pv.flag),
   };

@@ -265,3 +265,24 @@ test('German report names, English names for unknown tests, re-matching saved ow
   const custom = point({ id: 'x', reportId: 'r', date: '2025-07-09', metric: 'custom:glasmarker-x', name: 'Glasmarker X', nameEn: 'Glass marker X', valueRaw: '3', unit: 'U/l' }, null);
   assert.equal(custom.raw, 3);
 });
+
+test('Ukrainian reports: units in two languages, platelet indices, described ranges, blood group', async () => {
+  const { matchMetric, getMetric } = await import('../js/metrics.js');
+  const { convert, canConvert } = await import('../js/units.js');
+  const { parseRange } = await import('../js/parse.js');
+  const { bloodGroup } = await import('../js/print.js');
+  const cases = [['Г/л (x 10^9/L)', 'wbc', 4.34, 4.34], ['г/л (x 10^9/L)', 'hb', 145, 145], ['Т/л (x 10^12/L)', 'rbc', 4.65, 4.65],
+    ['Г/л (g/L)', 'mchc', 346, 346], ['фл (fL)', 'mcv', 90.1, 90.1], ['пг (pg)', 'mch', 31.2, 31.2], ['мм/год (mm/hr)', 'esr', 2, 2], ['Г/л (G/l)', 'neut_abs', 2.5, 2.5]];
+  for (const [u, k, v, want] of cases) assert.equal(convert(v, u, getMetric(k)), want, `${k} in ${u}`);
+  assert.equal(canConvert('kg (lb)', getMetric('hb')), false);
+  for (const [n, k] of [['Стандартне відхилення ширини розподілу еритроцитів, (RDW-SD)', 'rdw_sd'], ['Коефіцієнт варіації розподілу еритроцитів, (RDW-CV)', 'rdw'],
+    ['Ширина розподілу тромбоцитів, (PDW)', 'pdw'], ['Тромбокрит, (PCT)', 'plateletcrit'], ['Коефіцієнт великих тромбоцитів, (P-LCR)', 'plcr'], ['Тромбоцити, (PLT)', 'plt'],
+    ['Procalcitonin (PCT)', null]]) assert.equal(matchMetric(n, '%', 1) === null ? null : matchMetric(n, '%', 1), k, n);
+  assert.deepEqual(parseRange('30 - 100 - норма; 10 - 30 - недостатність; < 10 - дефіцит; > 100 - можливий токсичний ефект'), { low: 30, high: 100 });
+  assert.deepEqual(parseRange('ризик дефіциту < 10,0; дорослі 30.0-50,0'), { low: 30, high: 50 });
+  assert.deepEqual(parseRange('4,0-10,0'), { low: 4, high: 10 });
+  assert.deepEqual(parseRange('siehe Befund'), { low: null, high: null });
+  const obs = [{ name: 'Група крові', valueRaw: 'O ( I )', date: '2021-06-02' }, { name: 'Резус фактор', valueRaw: 'rh ( - ) отрицательный', date: '2021-06-02' }];
+  assert.equal(bloodGroup(obs), 'O (I) Rh−');
+  assert.equal(bloodGroup([{ name: 'Blutgruppe', valueRaw: 'A', date: '2020-01-01' }, { name: 'Rhesusfaktor', valueRaw: 'Rh-positiv', date: '2020-01-01' }]), 'A Rh+');
+});

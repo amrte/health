@@ -1,7 +1,7 @@
 // Parsing of values, reference ranges and Claude's extraction replies. Pure functions.
 
 import { METRICS, CATEGORIES, getMetric, matchMetric, isUrineName, customKey } from './metrics.js';
-import { convert, normUnit } from './units.js';
+import { convert, unitFor } from './units.js';
 
 // "5,3" → 5.3, "1.234,5" → 1234.5, "1,234.5" → 1234.5. Returns null if not a number.
 export function parseNumber(s) {
@@ -42,7 +42,23 @@ const UPPER = new RegExp(String.raw`^(?:<=?|≤|bis|до|up\s*to|under|alle|unte
 const LOWER = new RegExp(String.raw`^(?:>=?|≥|über|uber|ab|від|от|yli|over|above|більше|более)\s*${NUM}$`, 'i');
 
 // "3.5–5.0", "< 5", "> 1,0", "bis 200". Returns { low, high } (either may be null).
+// A description ("30 - 100 - норма; 10 - 30 - недостатність; < 10 - дефіцит")
+// gives the part marked normal, or for adults.
+const NORMAL_WORDS = /норм|norm|refer|дорос|взросл|adult|aikuis|erwachs/i;
 export function parseRange(raw) {
+  const r = parseRangeExact(raw);
+  if (r.low != null || r.high != null) return r;
+  const parts = String(raw ?? '').split(/[;\n]|,\s(?=\D)/).map((x) => x.trim()).filter(Boolean);
+  const marked = parts.filter((x) => NORMAL_WORDS.test(x));
+  for (const part of marked) {
+    const t = part.replace(NORMAL_WORDS, ' ').replace(/[^\d.,<>≤≥\s–—-]+/g, ' ').replace(/\s*[-–—]\s*$/, '').replace(/^\s*[-–—]\s*/, '').trim();
+    const x = parseRangeExact(t);
+    if (x.low != null || x.high != null) return x;
+  }
+  return { low: null, high: null };
+}
+
+function parseRangeExact(raw) {
   const s = String(raw ?? '').trim().replace(/\s+/g, ' ');
   let m = s.match(RANGE);
   if (m) return { low: parseNumber(m[1]), high: parseNumber(m[2]) };
@@ -199,7 +215,7 @@ function oneValuePerDay(rows, docDate) {
     if (idx.length < 2) continue;
     const m = getMetric(rows[idx[0]].metric);
     const v = (i) => convert(parseValue(rows[i].valueRaw).value, rows[i].unit, m);
-    const rank = (i) => (PREFERRED[m.key]?.test(rows[i].name) ? 0 : v(i) == null ? 3 : normUnit(rows[i].unit) === m.cu ? 1 : 2);
+    const rank = (i) => (PREFERRED[m.key]?.test(rows[i].name) ? 0 : v(i) == null ? 3 : unitFor(rows[i].unit, m) === m.cu ? 1 : 2);
     const keep = [...idx].sort((a, b) => rank(a) - rank(b) || a - b)[0];
     for (const i of idx) {
       if (i === keep) continue;
