@@ -19,6 +19,8 @@ export const state = {
   profile: {}, // { sex: 'female' | 'male' | '', birthYear }
   measures: [], // daily values from devices: { id, date, kind, value, source }
   workouts: [], // { id, start, sport, durationS, distanceM, hrAvg, hrMax, kcal, load, source }
+  bp: [], // { id, time: 'YYYY-MM-DDTHH:MM', sys, dia, pulse, arm, place: 'home' | 'clinic', note, source }
+  genomes: [], // { id, provider, fileName, importedAt, build, total, snps: { rsid: genotype } }
   findings: [],
   reportById: new Map(),
   byMetric: new Map(), // key → { m, pts }
@@ -27,9 +29,9 @@ export const state = {
 
 export async function load() {
   let profile;
-  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts] = await Promise.all([
+  [state.reports, state.obs, state.vaccines, profile, state.measures, state.workouts, state.bp, state.genomes] = await Promise.all([
     db.getAll('reports'), db.getAll('obs'), db.getAll('vaccines'), db.get('settings', 'profile'),
-    db.getAll('measures'), db.getAll('workouts')]);
+    db.getAll('measures'), db.getAll('workouts'), db.getAll('bp'), db.getAll('genomes')]);
   state.profile = profile ?? {};
   derive();
 }
@@ -194,5 +196,25 @@ export async function deleteFitness(source) {
     measures: state.measures.filter((m) => !source || m.source === source).map((m) => m.id),
     workouts: state.workouts.filter((w) => !source || w.source === source).map((w) => w.id),
   } });
+  await load();
+}
+
+export async function saveBp(readings) {
+  await db.write({ put: { bp: readings } });
+  await load();
+}
+
+export async function deleteBp(ids) {
+  await db.write({ del: { bp: ids } });
+  await load();
+}
+
+export async function saveGenome(genome) {
+  await db.write({ put: { genomes: [genome] } });
+  await load();
+}
+
+export async function deleteGenome(id) {
+  await db.write({ del: { genomes: [id] } });
   await load();
 }

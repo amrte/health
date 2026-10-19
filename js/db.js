@@ -1,8 +1,8 @@
 // IndexedDB storage. Everything stays in this browser on this device.
 
 const NAME = 'health-records';
-const VERSION = 3;
-export const STORES = ['reports', 'obs', 'files', 'vaccines', 'settings', 'measures', 'workouts'];
+const VERSION = 4;
+export const STORES = ['reports', 'obs', 'files', 'vaccines', 'settings', 'measures', 'workouts', 'bp', 'genomes'];
 
 let opening;
 function open() {
@@ -18,6 +18,8 @@ function open() {
       if (!has('settings')) db.createObjectStore('settings', { keyPath: 'id' });
       if (!has('measures')) db.createObjectStore('measures', { keyPath: 'id' });
       if (!has('workouts')) db.createObjectStore('workouts', { keyPath: 'id' });
+      if (!has('bp')) db.createObjectStore('bp', { keyPath: 'id' });
+      if (!has('genomes')) db.createObjectStore('genomes', { keyPath: 'id' });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);

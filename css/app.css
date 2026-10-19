@@ -373,3 +373,14 @@ ul.sources { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap:
 .pill[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: transparent; }
 .chart-card h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .chart-card h2 small { font-weight: 400; color: var(--muted); font-size: 13px; }
+
+/* blood pressure */
+.chart .bp-bar { stroke: var(--series); stroke-width: 2; stroke-linecap: round; }
+.chart .bp-dot { fill: var(--series); stroke: var(--surface); stroke-width: 1.5; }
+.chart .bp-bar.out { stroke: var(--critical); }
+.chart .bp-dot.out { fill: var(--critical); }
+.bp-form { display: grid; gap: 12px; }
+.bp-nums { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.bp-nums input { font-size: 28px; font-weight: 650; text-align: center; padding: 10px 6px; }
+.bp-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.bp-latest { font-size: 32px; font-weight: 650; letter-spacing: -0.01em; }

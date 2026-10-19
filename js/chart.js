@@ -250,3 +250,70 @@ export function barChart(host, { bars, unit, target, targetLabel, height = 200 }
   if (lastW) draw();
   new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; draw(); } }).observe(wrap);
 }
+
+// Blood pressure: one vertical bar per day from diastolic to systolic (daily means),
+// with dots at both ends and reference lines. days: [{ t, sys, dia, n, label }]
+export function bpChart(host, { days, lines = [], height = 240 }) {
+  const wrap = h('div', { class: 'chart', style: `height:${height}px` });
+  const tip = h('div', { class: 'tip', hidden: true });
+  host.append(wrap);
+  if (!days.length) {
+    wrap.append(h('p', { class: 'muted chart-empty' }, 'No readings in this period.'));
+    return;
+  }
+  function draw() {
+    const W = Math.max(260, wrap.clientWidth);
+    const H = height;
+    const M = { l: 40, r: 44, t: 14, b: 26 };
+    const vals = days.flatMap((d) => [d.sys, d.dia]).concat(lines.map((l) => l.v));
+    const yt = niceTicks(Math.min(...vals) - 5, Math.max(...vals) + 5);
+    let t0 = days[0].t;
+    let t1 = days[days.length - 1].t;
+    if (t1 - t0 < 14 * DAY) { t0 -= 7 * DAY; t1 += 7 * DAY; }
+    const pad = (t1 - t0) * 0.03;
+    t0 -= pad; t1 += pad;
+    const x = (t) => M.l + ((t - t0) / (t1 - t0)) * (W - M.l - M.r);
+    const y = (v) => M.t + (1 - (v - yt.lo) / (yt.hi - yt.lo)) * (H - M.t - M.b);
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Blood pressure, ${days.length} days` });
+    for (const v of yt.ticks) {
+      svg.append(s('line', { x1: M.l, x2: W - M.r, y1: y(v), y2: y(v), class: v === yt.lo ? 'axis' : 'grid' }),
+        s('text', { x: M.l - 8, y: y(v), class: 'tick', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, fmtNum(v)));
+    }
+    const xt = timeTicks(t0, t1, Math.floor((W - M.l - M.r) / 64));
+    for (const t of xt.ticks) svg.append(s('text', { x: x(t), y: H - 8, class: 'tick', 'text-anchor': 'middle' }, xt.years ? new Date(t).getUTCFullYear() : fmtMonth(t)));
+    for (const l of lines) {
+      svg.append(s('line', { x1: M.l, x2: W - M.r, y1: y(l.v), y2: y(l.v), class: 'target' }),
+        s('text', { x: W - M.r + 4, y: y(l.v), class: 'target-label', 'dominant-baseline': 'middle' }, l.label));
+    }
+    const slot = (W - M.l - M.r) / Math.max(days.length, 1);
+    const r = slot < 6 ? 2 : 3.5;
+    for (const d of days) {
+      const cx = x(d.t);
+      const over = d.flag;
+      svg.append(
+        s('line', { x1: cx, x2: cx, y1: y(d.sys), y2: y(d.dia), class: 'bp-bar' + (over ? ' out' : '') }),
+        s('circle', { cx, cy: y(d.sys), r, class: 'bp-dot' + (over ? ' out' : '') }),
+        s('circle', { cx, cy: y(d.dia), r, class: 'bp-dot' + (over ? ' out' : '') }));
+    }
+    const hit = s('rect', { x: M.l, y: 0, width: W - M.l - M.r, height: H, class: 'hit' });
+    const show = (ev) => {
+      const px = ev.clientX - svg.getBoundingClientRect().left;
+      let best = days[0];
+      for (const d of days) if (Math.abs(x(d.t) - px) < Math.abs(x(best.t) - px)) best = d;
+      tip.replaceChildren(h('div', { class: 'tip-value' }, `${Math.round(best.sys)}/${Math.round(best.dia)} mmHg`),
+        h('div', { class: 'tip-meta' }, best.label), h('div', { class: 'tip-meta' }, best.n > 1 ? `average of ${best.n} readings` : '1 reading'));
+      tip.hidden = false;
+      const w = tip.offsetWidth;
+      tip.style.left = Math.min(Math.max(x(best.t) - w / 2, 0), wrap.clientWidth - w) + 'px';
+      tip.style.top = Math.max(y(best.sys) - tip.offsetHeight - 12, 0) + 'px';
+    };
+    hit.addEventListener('pointermove', show);
+    hit.addEventListener('pointerdown', show);
+    hit.addEventListener('pointerleave', (ev) => { if (ev.pointerType === 'mouse') tip.hidden = true; });
+    svg.append(hit);
+    wrap.replaceChildren(svg, tip);
+  }
+  let lastW = wrap.clientWidth;
+  if (lastW) draw();
+  new ResizeObserver(() => { if (wrap.clientWidth !== lastW) { lastW = wrap.clientWidth; draw(); } }).observe(wrap);
+}
