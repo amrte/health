@@ -361,7 +361,8 @@ Set `CHROMIUM_PATH` if Playwright's bundled browser isn't installed.
 | `js/data.js`, `js/demo.js` | Backup, storage, demo data |
 
 The title font is a 5 KB subset of Marck Script (SIL Open Font License),
-embedded in `css/app.css`.
+embedded in `css/app.css`. The olive branch is `icons/olive-branch.png` (a
+transparent 24 KB picture); the single-file build inlines it.
 
 Results are stored as printed (value, unit and range as text) and are parsed
 and converted on load. Improvements to the catalogue therefore also apply to

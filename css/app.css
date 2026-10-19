@@ -612,21 +612,21 @@ mark { background: var(--accent-soft); }
 .hero-banner .actions { position: relative; z-index: 1; }
 .hero-greeting { color: var(--accent-ink); font-weight: 600; font-size: 14px; margin-bottom: 2px; }
 .hero-banner .sub { color: var(--ink-2); margin: 6px 0 0; }
-.leaf-sprig { position: absolute; right: -18px; top: -14px; width: 190px; height: 133px; opacity: .9; pointer-events: none; transform: rotate(8deg); }
-.leaf-empty { display: block; width: 120px; height: 84px; margin: 0 0 6px -6px; }
+.leaf-sprig { position: absolute; right: -16px; top: -8px; width: 230px; height: auto; pointer-events: none; user-select: none; }
+.leaf-empty { display: block; width: 150px; height: auto; margin: 0 0 8px -4px; }
 .side-leaves { display: none; }
 @media (max-width: 480px) {
   .hero-banner { padding: 18px 16px 16px; border-radius: 18px; }
-  .leaf-sprig { width: 130px; height: 91px; right: -22px; top: -16px; opacity: .75; }
+  .leaf-sprig { width: 150px; right: -26px; top: -10px; opacity: .8; }
   .hero-banner .actions { width: 100%; }
 }
 @media (min-width: 960px) {
   .tabs { background: color-mix(in srgb, var(--surface) 80%, var(--bg-tint)); }
   .tabs a[aria-current] { background: var(--accent-soft); }
-  .side-leaves { display: block; width: 150px; height: 105px; margin: auto 0 -6px 30px; opacity: .85; pointer-events: none; }
+  .side-leaves { display: block; width: 190px; height: auto; margin: auto 0 4px 10px; pointer-events: none; user-select: none; }
   .tabs .quick { margin-top: 0; }
   .hero-banner { padding: 28px 28px 24px; }
-  .leaf-sprig { width: 260px; height: 182px; right: -10px; top: -26px; }
+  .leaf-sprig { width: 330px; right: -12px; top: -14px; }
   .hero-banner .actions { margin-right: 200px; }
 }
 @media (prefers-reduced-transparency: reduce) { .tabs { -webkit-backdrop-filter: none; backdrop-filter: none; } }
@@ -650,7 +650,10 @@ mark { background: var(--accent-soft); }
 .tabs .brand .logo { font-size: 11px; }
 .tabs .brand { flex-direction: column; align-items: flex-start; gap: 0; }
 @media (max-width: 480px) { .hero-banner .logo { font-size: 13px; } }
-.olive-hi { fill: #fff; opacity: .35; }
+
+/* The olive picture is a little softer on dark backgrounds. */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .leaf-sprig, :root:not([data-theme="light"]) .side-leaves { opacity: .85; } }
+:root[data-theme="dark"] .leaf-sprig, :root[data-theme="dark"] .side-leaves { opacity: .85; }
 
 /* Medicines and illnesses on trend charts */
 .chart .period-med { fill: var(--olive); opacity: .75; }

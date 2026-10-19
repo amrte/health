@@ -19,6 +19,7 @@ const { outputFiles } = await build({
 const js = outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const css = await read('css/app.css');
 const icon = 'data:image/svg+xml,' + encodeURIComponent(await read('icons/icon.svg'));
+const olive = 'data:image/png;base64,' + (await readFile(new URL('icons/olive-branch.png', root))).toString('base64');
 
 let html = await read('index.html');
 html = html
@@ -26,9 +27,10 @@ html = html
   .replace(/\s*<link rel="apple-touch-icon"[^>]*>/, '')
   .replace(/<link rel="icon"[^>]*>/, `<link rel="icon" href="${icon}">`)
   .replace(/src="icons\/icon.svg"/g, `src="${icon}"`)
+  .replace(/src="icons\/olive-branch.png"/g, `src="${olive}"`)
   .replace(/<link rel="stylesheet" href="css\/app.css">/, () => `<style>\n${css}</style>`)
-  .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `<script type="module">\n${js}</script>`);
-if (html.includes('src="js/') || html.includes('href="css/')) throw new Error('Unbundled reference left in HTML');
+  .replace(/<script type="module" src="js\/main.js"><\/script>/, () => `<script type="module">\n${js.replaceAll('icons/olive-branch.png', olive)}</script>`);
+if (html.includes('src="js/') || html.includes('href="css/') || html.includes('icons/olive-branch.png')) throw new Error('Unbundled reference left in HTML');
 
 await mkdir(new URL('dist/', root), { recursive: true });
 await writeFile(new URL('dist/health-records.html', root), html);
