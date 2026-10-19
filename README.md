@@ -187,20 +187,24 @@ without running it; use the hosted version described below.
 
 ## Using it on iPhone
 
-The app is static files (no server code), but it has to be served over HTTPS
-for installing and offline use. GitHub Pages for a **private** repository
-needs a paid GitHub plan. Options:
+The app is published with GitHub Pages at **https://amrte.github.io/health/**.
+The workflow in `.github/workflows/pages.yml` runs the unit tests and deploys
+on every push. Only the app's code is published, never your data, which
+stays on your phone.
 
-1. **Make the repository public and turn on GitHub Pages** (Settings → Pages →
-   deploy from branch). The repository contains only the app's code, never your
-   data, which stays on your phone.
-2. Keep it private and host it free on **Cloudflare Pages** or **Netlify**,
-   both of which can deploy from a private GitHub repository.
+One-time setup (repository owner):
+1. Settings → General → Danger Zone → *Change visibility* → Public. GitHub
+   Pages for private repositories needs a paid plan.
+2. Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+3. Actions → *Deploy to GitHub Pages* → *Run workflow*. This is only needed
+   once, if the first run failed before Pages was enabled.
 
 Then open the URL in Safari, tap Share → *Add to Home Screen*, and always
-start the app from that icon. Safari can clear storage for websites you
-haven't visited in a while, but not for Home Screen apps. Still, **export a
-backup regularly**, because the data exists only on the phone.
+start the app from that icon. Home Screen apps keep their data (Safari can
+clear website storage after a while), and the app works offline. Still,
+**export a backup regularly**, because the data exists only on the device.
+On a Mac, the same URL works in Safari, Chrome or Firefox, and the data
+stays separate per browser.
 
 ## Development
 
