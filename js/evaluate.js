@@ -73,7 +73,7 @@ export function generalFindings(key, entry, now = Date.now()) {
   }
   const harmless = (last.status === 'high' && m.highOk) || (last.status === 'low' && m.lowOk);
   if (harmless) {
-    out.push({ keys: [key], level: 'good', kind: 'range', title: `${m.name} ${last.status === 'high' ? 'above' : 'below'} the device’s range`,
+    out.push({ keys: [key], level: 'good', kind: 'range', title: `${m.name} ${last.status === 'high' ? 'above' : 'below'} the ${source}’s range`,
       text: `Latest ${fmtNum(last.v ?? last.raw)} ${unit} vs. ${range(last)}. ${last.status === 'high' ? 'More than the reference' : 'Less than the reference'} is not a concern for this value.`, sources: [] });
   } else if (last.status === 'high' || last.status === 'low') {
     let n = 1;

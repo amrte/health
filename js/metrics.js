@@ -70,7 +70,7 @@ const DEFS = [
     aliases: ['ret he', 'reticulocyte hemoglobin', 'reticulocyte haemoglobin', 'reticulocyte hemoglobin equivalent', 'retikulozytenhämoglobin', 'retikulozyten hämoglobin', 'chr', 'ret hb', 'retikulosyyttien hemoglobiini', 'гемоглобін ретикулоцитів', 'гемоглобин ретикулоцитов'] },
   { key: 'rpi', cat: 'cbc', name: 'Reticulocyte production index', unit: '', alt: { index: 1 },
     aliases: ['rpi', 'reticulocyte production index', 'retikulozytenproduktionsindex', 'retikulozyten produktionsindex', 'reti produkt index', 'індекс продукції ретикулоцитів', 'индекс продукции ретикулоцитов'] },
-  { key: 'hypo', cat: 'cbc', name: 'Hypochromic red cells', unit: '%',
+  { key: 'hypo', cat: 'cbc', name: 'Hypochromic red cells', unit: '%', lowOk: true,
     aliases: ['hypochromic red cells', 'hypochromic erythrocytes', 'hypo', 'hypo he', 'anteil hypochromer erys', 'anteil hypochromer erythrozyten', 'hypochrome erythrozyten', 'hypokromiset punasolut', 'гіпохромні еритроцити', 'гипохромные эритроциты'] },
 
   // Glucose & metabolism
